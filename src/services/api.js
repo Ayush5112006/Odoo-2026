@@ -1,7 +1,6 @@
 import { getStoredAuth } from '../utils/auth.js'
 
-const baseURL = import.meta.env.VITE_API_URL || '/api'
-
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 const request = async (path, options = {}) => {
   const auth = getStoredAuth()

@@ -1,8 +1,13 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import connectDB from './config/db.js'
 import User from './models/User.js'
 
-dotenv.config()
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const envPath = path.resolve(__dirname, '../.env')
+dotenv.config({ path: envPath })
 
 const users = [
   { name: 'Alex', email: 'alex@transitops.in', password: 'password123', role: 'Dispatcher' },

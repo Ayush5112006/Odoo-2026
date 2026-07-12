@@ -1,6 +1,6 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
-import User, { MAX_ATTEMPTS, LOCK_TIME_MS } from '../models/User.js'
+import User from '../models/User.js'
 
 const router = express.Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'transitops-secret'
@@ -34,45 +34,56 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials.' })
     }
 
-    // Check if account is locked
-    if (user.isLocked) {
+    // Check if account is currently locked
+    if (user.lockUntil && user.lockUntil > Date.now()) {
       const remainingMs = user.lockUntil - Date.now()
-      const remainingMin = Math.ceil(remainingMs / 60000)
-      return res.status(423).json({
+      const minutes = Math.floor(remainingMs / 60000)
+      const seconds = Math.ceil((remainingMs % 60000) / 1000)
+      let timeStr = `${minutes} minute(s) and ${seconds} second(s)`
+      if (minutes === 0) {
+        timeStr = `${seconds} second(s)`
+      }
+      return res.status(403).json({
         success: false,
-        locked: true,
-        message: `Account is locked due to ${MAX_ATTEMPTS} failed attempts. Try again in ${remainingMin} minute${remainingMin !== 1 ? 's' : ''}.`,
+        message: `Account is temporarily locked. Try again in ${timeStr}.`,
         lockUntil: user.lockUntil,
+        remainingAttempts: 0
       })
+    } else if (user.lockUntil && user.lockUntil <= Date.now()) {
+      // Lock has expired, reset attempts
+      user.lockUntil = undefined
+      user.loginAttempts = 0
     }
 
     const isMatch = await user.comparePassword(password)
     if (!isMatch) {
-      // Increment failed attempts
-      await user.incLoginAttempts()
+      user.loginAttempts = (user.loginAttempts || 0) + 1
 
-      const attemptsLeft = MAX_ATTEMPTS - user.failedLoginAttempts
-      const nowLocked = user.failedLoginAttempts >= MAX_ATTEMPTS
-
-      if (nowLocked) {
-        const lockMin = Math.ceil(LOCK_TIME_MS / 60000)
-        return res.status(423).json({
+      if (user.loginAttempts >= 5) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000) // Lock for 15 mins
+        user.loginAttempts = 0 // Reset attempt counter
+        await user.save()
+        return res.status(403).json({
           success: false,
-          locked: true,
-          message: `Account locked after ${MAX_ATTEMPTS} failed attempts. Try again in ${lockMin} minutes.`,
+          message: 'Account locked for 15 minutes due to 5 consecutive failed attempts.',
           lockUntil: user.lockUntil,
+          remainingAttempts: 0
+        })
+      } else {
+        const remaining = 5 - user.loginAttempts
+        await user.save()
+        return res.status(401).json({
+          success: false,
+          message: `Invalid credentials. ${remaining} attempt(s) remaining before lock.`,
+          remainingAttempts: remaining
         })
       }
-
-      return res.status(401).json({
-        success: false,
-        message: `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining before account lockout.`,
-        attemptsLeft,
-      })
     }
 
-    // Successful login — reset failed attempts
-    await user.resetLoginAttempts()
+    // Success - reset attempts
+    user.loginAttempts = 0
+    user.lockUntil = undefined
+    await user.save()
 
     const token = createToken(user)
 

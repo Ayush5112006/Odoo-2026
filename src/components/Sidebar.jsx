@@ -1,72 +1,88 @@
 import React from 'react';
 
 const NAV_ITEMS = [
-  { name: 'Dashboard', view: 'dashboard', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>
-  )},
-  { name: 'Fleet', view: 'fleet', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 13l1.5-5A2 2 0 0 1 6.4 6.5h11.2A2 2 0 0 1 19.5 8l1.5 5"/><rect x="2" y="13" width="20" height="5" rx="1.5"/><circle cx="7" cy="18.5" r="1.6"/><circle cx="17" cy="18.5" r="1.6"/></svg>
-  )},
-  { name: 'Drivers', view: 'drivers', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
-  )},
-  { name: 'Trips', view: 'trips', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 19l5-14 3 9 3-6 5 11"/></svg>
-  )},
-  { name: 'Maintenance', view: 'maintenance', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4L15 12l-1-1z"/></svg>
-  )},
-  { name: 'Fuel/Exp.', view: 'fuel', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 21V6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v15M6 21h9M6 10h7M15 8l2.5 2.5V17a1.5 1.5 0 0 0 3 0v-5l-2-2"/></svg>
-  )},
-  { name: 'Analytics', view: 'analytics', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 20V10M11 20V4M18 20v-7"/></svg>
-  )},
-  { name: 'Settings & RBAC', view: 'settings', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-  )},
+  { name: 'Dashboard', view: 'dashboard', icon: 'dashboard' },
+  { name: 'Fleet', view: 'fleet', icon: 'local_shipping' },
+  { name: 'Drivers', view: 'drivers', icon: 'person' },
+  { name: 'Trips', view: 'trips', icon: 'route' },
+  { name: 'Maintenance', view: 'maintenance', icon: 'build' },
+  { name: 'Fuel/Exp.', view: 'fuel', icon: 'local_gas_station' },
+  { name: 'Analytics', view: 'analytics', icon: 'bar_chart' },
+  { name: 'Settings & RBAC', view: 'settings', icon: 'settings' },
 ];
 
 function Sidebar({ role, activeView, handleNavClick, logout, checkAccess }) {
   return (
-    <div className="sidebar">
-      <div className="side-brand">
-        <div className="brand-mark">T</div>
-        <span>TransitOps</span>
+    <aside className="w-64 fixed left-0 top-16 h-[calc(100vh-4rem)] bg-surface-container-low border-r border-outline-variant px-4 py-6 flex flex-col z-40 overflow-y-auto">
+      {/* Brand */}
+      <div className="flex items-center gap-3 px-2 mb-2">
+        <div className="w-9 h-9 rounded-lg bg-secondary-container flex items-center justify-center text-on-secondary-container font-extrabold text-base shadow-sm">
+          T
+        </div>
+        <span className="text-primary font-bold text-lg tracking-tight">TransitOps</span>
       </div>
-      <div className="side-route route-line"><div className="marker"></div></div>
 
-      <div className="nav-group-label">Operate</div>
+      {/* Route line */}
+      <div className="route-line mx-2 my-3"><div className="marker"></div></div>
+
+      {/* Operate Group */}
+      <p className="font-label-sm text-label-sm uppercase tracking-wider text-outline px-3 mt-4 mb-2">Operate</p>
       {NAV_ITEMS.slice(0, 4).map(item => {
         const isAllowed = checkAccess(item.name);
+        const isActive = activeView === item.view;
         return (
-          <div key={item.view}
-               className={`navitem ${activeView === item.view ? 'active' : ''} ${!isAllowed ? 'locked' : ''}`}
-               onClick={() => handleNavClick(item)}>
-            {item.icon}
+          <button
+            key={item.view}
+            onClick={() => handleNavClick(item)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5
+              ${isActive
+                ? 'bg-secondary-container text-on-secondary-container font-semibold'
+                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}
+              ${!isAllowed ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
             {item.name}
-          </div>
+            {!isAllowed && <span className="material-symbols-outlined text-[14px] ml-auto">lock</span>}
+          </button>
         );
       })}
 
-      <div className="nav-group-label">Manage</div>
+      {/* Manage Group */}
+      <p className="font-label-sm text-label-sm uppercase tracking-wider text-outline px-3 mt-5 mb-2">Manage</p>
       {NAV_ITEMS.slice(4).map(item => {
         const isAllowed = checkAccess(item.name === 'Settings & RBAC' ? '__settings' : item.name);
+        const isActive = activeView === item.view;
         return (
-          <div key={item.view}
-               className={`navitem ${activeView === item.view ? 'active' : ''} ${!isAllowed ? 'locked' : ''}`}
-               onClick={() => handleNavClick(item)}>
-            {item.icon}
+          <button
+            key={item.view}
+            onClick={() => handleNavClick(item)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5
+              ${isActive
+                ? 'bg-secondary-container text-on-secondary-container font-semibold'
+                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'}
+              ${!isAllowed ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
             {item.name}
-          </div>
+            {!isAllowed && <span className="material-symbols-outlined text-[14px] ml-auto">lock</span>}
+          </button>
         );
       })}
 
-      <div className="sidebar-foot">
-        <div className="role-pill" id="sideRolePill">ROLE: {role}</div>
-        <span className="logout-link" onClick={logout}>Sign out</span>
+      {/* Footer */}
+      <div className="mt-auto pt-6 border-t border-outline-variant mx-2">
+        <div className="bg-primary-fixed text-on-primary-fixed text-[10.5px] font-semibold uppercase tracking-[0.08em] rounded-full px-3 py-1.5 text-center mb-3">
+          ROLE: {role}
+        </div>
+        <button
+          onClick={logout}
+          className="w-full flex items-center justify-center gap-2 text-sm text-error hover:text-on-error hover:bg-error rounded-lg px-3 py-2 transition-colors font-medium"
+        >
+          <span className="material-symbols-outlined text-[18px]">logout</span>
+          Sign out
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }
 
