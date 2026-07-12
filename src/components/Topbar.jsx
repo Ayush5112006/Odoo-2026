@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Topbar({ globalSearch, setGlobalSearch, role, getAvatarInitials }) {
+function Topbar({ globalSearch, setGlobalSearch, role, getAvatarInitials, userName }) {
   return (
     <div className="topbar">
       <div className="search">
@@ -13,7 +13,7 @@ function Topbar({ globalSearch, setGlobalSearch, role, getAvatarInitials }) {
       <div className="topbar-right">
         <div className="user-chip">
           <div>
-            <div className="name" id="topUserName">Raven K.</div>
+            <div className="name" id="topUserName">{userName || 'TransitOps User'}</div>
           </div>
           <span className="role-badge" id="topRoleBadge">{role.toUpperCase()}</span>
         </div>

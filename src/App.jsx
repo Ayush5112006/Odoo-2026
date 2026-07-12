@@ -3,9 +3,12 @@ import './App.css';
 
 // Import helpers
 import { isLicenseExpired, fmtMoney, getPill } from './utils/helpers';
+import { getStoredAuth, storeAuth, clearAuth, isValidEmail } from './utils/auth';
+import api from './services/api';
 
 // Import view components
 import LoginView from './components/LoginView';
+import AccessDenied from './components/AccessDenied';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import DashboardView from './components/DashboardView';
@@ -24,13 +27,50 @@ const ROLE_ACCESS = {
   'Financial Analyst': ['Fuel/Exp.', 'Analytics'],
 };
 
+const ROLE_VIEW_MAP = {
+  Dashboard: 'dashboard',
+  Fleet: 'fleet',
+  Drivers: 'drivers',
+  Trips: 'trips',
+  Maintenance: 'maintenance',
+  'Fuel/Exp.': 'fuel',
+  Analytics: 'analytics',
+};
+
+const parseToken = (token) => {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded;
+  } catch (err) {
+    return null;
+  }
+};
+
 function App() {
   // --- AUTH STATE ---
-  const [role, setRole] = useState(null);
-  const [loginEmail, setLoginEmail] = useState('raven.k@transitops.in');
-  const [loginPass, setLoginPass] = useState('demo1234');
-  const [loginRole, setLoginRole] = useState('Dispatcher');
-  const [loginError, setLoginError] = useState(false);
+  const [auth, setAuth] = useState(() => {
+    const stored = getStoredAuth();
+    const payload = stored?.token ? parseToken(stored.token) : null;
+    if (!stored || !payload || payload.exp * 1000 < Date.now()) {
+      clearAuth();
+      return null;
+    }
+    return stored;
+  });
+  const [role, setRole] = useState(auth?.user?.role || null);
+  const [userName, setUserName] = useState(auth?.user?.name || '');
+  const [loginEmail, setLoginEmail] = useState(auth?.user?.email || '');
+  const [loginPass, setLoginPass] = useState('');
+  const [loginRole, setLoginRole] = useState(auth?.user?.role || 'Dispatcher');
+  const [rememberMe, setRememberMe] = useState(Boolean(auth));
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState(auth?.user?.email || '');
+  const [forgotMessage, setForgotMessage] = useState('');
 
   // --- APP LEVEL GLOBAL STATES ---
   const [activeView, setActiveView] = useState('dashboard');
@@ -205,45 +245,126 @@ function App() {
   };
 
   // --- ACTIONS ---
-  const doLogin = (e) => {
+  const handleForgotPassword = async (e) => {
     if (e) e.preventDefault();
-    if (!loginEmail || !loginPass) {
-      setLoginError(true);
+    setLoginError('');
+    setForgotMessage('');
+
+    if (!forgotEmail) {
+      setForgotMessage('Email is required to reset password.');
       return;
     }
-    setLoginError(false);
-    setRole(loginRole);
-    triggerToast(`Logged in as ${loginRole}`);
 
-    // Navigate to first allowed view
-    const allowed = ROLE_ACCESS[loginRole];
-    if (allowed && allowed.length > 0) {
-      const target = allowed[0].toLowerCase().replace('/exp.', '').replace('fuel', 'fuel');
-      setActiveView(target);
-    } else {
-      setActiveView('dashboard');
+    if (!isValidEmail(forgotEmail)) {
+      setForgotMessage('Please enter a valid email address.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post('/auth/forgot-password', { email: forgotEmail });
+      setForgotMessage(response.data.message || 'If that email exists, reset instructions are sent.');
+    } catch (error) {
+      setForgotMessage('Unable to send reset instructions. Try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const doLogin = async (e) => {
+    if (e) e.preventDefault();
+    setLoginError('');
+    setForgotMessage('');
+
+    if (forgotMode) {
+      return handleForgotPassword(e);
+    }
+
+    if (!loginEmail || !loginPass) {
+      setLoginError('Email and password are required.');
+      return;
+    }
+
+    if (!isValidEmail(loginEmail)) {
+      setLoginError('Please enter a valid email address.');
+      return;
+    }
+
+    if (loginPass.length < 8) {
+      setLoginError('Password must contain at least 8 characters.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post('/auth/login', {
+        email: loginEmail,
+        password: loginPass,
+      });
+
+      const data = response.data;
+      if (!data.success) {
+        setLoginError(data.message || 'Invalid credentials.');
+        return;
+      }
+
+      const tokenPayload = parseToken(data.token);
+      const authData = {
+        token: data.token,
+        user: data.user,
+        expiresAt: tokenPayload?.exp ? tokenPayload.exp * 1000 : Date.now() + 2 * 60 * 60 * 1000,
+      };
+
+      storeAuth(authData, rememberMe);
+      setAuth(authData);
+      setRole(data.user.role);
+      setUserName(data.user.name);
+      setLoginRole(data.user.role);
+      setForgotMode(false);
+      setLoginError('');
+      triggerToast(`Welcome back, ${data.user.name}!`);
+
+      const allowed = ROLE_ACCESS[data.user.role];
+      setActiveView(ROLE_VIEW_MAP[allowed?.[0]] || 'dashboard');
+    } catch (error) {
+      setLoginError(
+        error?.response?.data?.message ||
+          'Unable to login. Please check your credentials and try again.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = () => {
+    clearAuth();
+    setAuth(null);
     setRole(null);
-    setLoginEmail('raven.k@transitops.in');
-    setLoginPass('demo1234');
+    setUserName('');
+    setLoginEmail('');
+    setLoginPass('');
     setLoginRole('Dispatcher');
+    setRememberMe(false);
+    setActiveView('dashboard');
+    triggerToast('Signed out successfully');
   };
 
   const checkAccess = (perm) => {
-    if (perm === '__settings') return true;
     if (!role) return false;
-    return ROLE_ACCESS[role].includes(perm);
+    if (perm === '__settings') {
+      return role === 'Fleet Manager';
+    }
+    return ROLE_ACCESS[role]?.includes(perm);
   };
 
   const handleNavClick = (item) => {
-    const isAllowed = checkAccess(item.name === 'Settings & RBAC' ? '__settings' : item.name);
-    if (!isAllowed) {
-      triggerToast(`${role} role does not have access to ${item.name}`, true);
+    const permission = item.name === 'Settings & RBAC' ? '__settings' : item.name;
+
+    if (!checkAccess(permission)) {
+      setActiveView('access-denied');
       return;
     }
+
     setActiveView(item.view);
   };
 
@@ -485,9 +606,10 @@ function App() {
 
   // Extract avatar initials
   const getAvatarInitials = () => {
-    if (!loginEmail) return 'RK';
-    const splitEmail = loginEmail.split('@')[0].split('.');
-    return splitEmail.map(s => s[0]).join('').toUpperCase().slice(0, 2) || 'RK';
+    const source = userName || loginEmail;
+    if (!source) return 'TO';
+    const segments = source.split(/[@.\s]+/).filter(Boolean);
+    return segments.map(s => s[0]).join('').toUpperCase().slice(0, 2) || 'TO';
   };
 
   // --- RENDER LOGIN VIEW ---
@@ -501,6 +623,16 @@ function App() {
         loginRole={loginRole}
         setLoginRole={setLoginRole}
         loginError={loginError}
+        rememberMe={rememberMe}
+        setRememberMe={setRememberMe}
+        showPassword={showPassword}
+        setShowPassword={setShowPassword}
+        loading={loading}
+        forgotMode={forgotMode}
+        setForgotMode={setForgotMode}
+        forgotEmail={forgotEmail}
+        setForgotEmail={setForgotEmail}
+        forgotMessage={forgotMessage}
         doLogin={doLogin}
       />
     );
@@ -523,6 +655,7 @@ function App() {
           setGlobalSearch={setGlobalSearch}
           role={role}
           getAvatarInitials={getAvatarInitials}
+          userName={userName}
         />
 
         <div className="content">
@@ -628,6 +761,10 @@ function App() {
               isLicenseExpired={isLicenseExpired}
               getPill={getPill}
             />
+          )}
+
+          {activeView === 'access-denied' && (
+            <AccessDenied role={role} onReturn={() => setActiveView('dashboard')} />
           )}
 
           {activeView === 'maintenance' && (
