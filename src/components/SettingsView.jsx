@@ -7,9 +7,7 @@ function SettingsView({
   setSettingsCurrency,
   settingsDistance,
   setSettingsDistance,
-  triggerToast,
-  rbacAccess,
-  rbacRoles
+  saveSettings
 }) {
   const modules = ['Fleet', 'Drivers', 'Trips', 'Fuel/Exp.', 'Analytics'];
 
@@ -42,7 +40,7 @@ function SettingsView({
             <label>Distance Unit</label>
             <input value={settingsDistance} onChange={(e) => setSettingsDistance(e.target.value)} />
           </div>
-          <button className="btn btn-primary" style={{ width: 'auto' }} onClick={() => triggerToast('Settings saved')}>Save changes</button>
+          <button className="btn btn-primary" style={{ width: 'auto' }} onClick={saveSettings}>Save changes</button>
         </div>
 
         <div className="card">

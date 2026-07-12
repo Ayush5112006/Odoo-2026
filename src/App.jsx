@@ -1011,6 +1011,7 @@ function App() {
               setSettingsCurrency={setSettingsCurrency}
               settingsDistance={settingsDistance}
               setSettingsDistance={setSettingsDistance}
+              saveSettings={saveSettings}
               triggerToast={saveSettings} // Trigger saveSettings API
               rbacAccess={rbacAccess}
               rbacRoles={rbacRoles}

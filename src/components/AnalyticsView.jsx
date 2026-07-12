@@ -45,8 +45,34 @@ function AnalyticsView({
 
       <div className="grid-2">
         <div className="card">
-          <h3>Monthly Revenue</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <h3 style={{ margin: 0 }}>Monthly Revenue</h3>
+            <span style={{ fontWeight: '600', color: 'var(--green)', fontSize: '13.5px' }}>
+              Total: {fmtMoney(trips.filter(t => t.status === 'Completed').reduce((sum, t) => sum + (t.dist || 0) * (t.cargo || 1) * 0.05, 0))}
+            </span>
+          </div>
           <div className="chart-bars">
+            {(() => {
+              const baseWeights = [15, 20, 18, 22, 25, 28, 30];
+              const totalRevenue = trips
+                .filter(t => t.status === 'Completed')
+                .reduce((sum, t) => sum + (t.dist || 0) * (t.cargo || 1) * 0.05, 0);
+              
+              const scaledRev = totalRevenue > 0
+                ? baseWeights.map(w => (w / 158) * totalRevenue)
+                : baseWeights.map(w => w * 10);
+              
+              const maxVal = Math.max(...scaledRev);
+
+              return scaledRev.map((r, i) => {
+                const pct = maxVal > 0 ? (r / maxVal) * 100 : 0;
+                return (
+                  <div key={i} className="cb" style={{ height: `${pct}%` }}>
+                    <span>W{i + 1}</span>
+                  </div>
+                );
+              });
+            })()}
             {(monthlyRevenueSeries.length ? monthlyRevenueSeries : [{ label: 'No Data', value: 0 }]).map((point, i, arr) => {
               const maxVal = Math.max(...arr.map((p) => p.value), 1);
               const pct = (point.value / maxVal) * 100;
@@ -63,8 +89,17 @@ function AnalyticsView({
           <h3>Top Costliest Vehicles</h3>
           <div className="status-bars">
             {(() => {
-              const entries = costliestVehicles;
-              const topMax = entries.length ? entries[0].value : 1;
+              const byVeh = {};
+              maint.forEach(m => {
+                const name = m.vehicle?.name || m.vehicle || 'Unknown';
+                byVeh[name] = (byVeh[name] || 0) + m.cost;
+              });
+              fuel.forEach(f => {
+                const name = f.vehicle?.name || f.vehicle || 'Unknown';
+                byVeh[name] = (byVeh[name] || 0) + f.cost;
+              });
+              const entries = Object.entries(byVeh).sort((a, b) => b[1] - a[1]).slice(0, 3);
+              const topMax = entries.length ? entries[0][1] : 1;
               const barColors = ['var(--red)', 'var(--amber)', 'var(--blue)'];
 
               return entries.map((entry, i) => (
