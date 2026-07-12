@@ -10,12 +10,14 @@
   --muted-2: #94a3b8;
   --green: #10b981;
   --green-dim: #059669;
-  --blue: #06b6d4;
-  --blue-dim: #0891b2;
+  /* Fixed: was cyan (#06b6d4), now proper blue */
+  --blue: #2563eb;
+  --blue-dim: #1d4ed8;
   --red: #ef4444;
   --purple: #8b5cf6;
-  --amber: #0ea5e9;
-  --amber-dim: #0284c7;
+  /* Fixed: was sky-blue (#0ea5e9), now proper amber/orange */
+  --amber: #d97706;
+  --amber-dim: #b45309;
 
   /* Left sidebar variables (Green + Blue Gradient) */
   --sidebar-gradient: linear-gradient(180deg, #10b981 0%, #06b6d4 100%);
@@ -661,9 +663,9 @@ a {
   font-size: 10.5px;
   padding: 4px 9px;
   border-radius: 20px;
-  background: rgba(91, 157, 249, 0.12);
+  background: rgba(37, 99, 235, 0.1);
   color: var(--blue);
-  border: 1px solid rgba(91, 157, 249, 0.3);
+  border: 1px solid rgba(37, 99, 235, 0.25);
 }
 
 .avatar {
@@ -764,6 +766,37 @@ a {
   align-items: start;
 }
 
+/* Keep the Live Board card pinned while scrolling the left column */
+#page-trips .grid-2 > .card:last-child {
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+#page-trips .grid-2 > .card:last-child #liveBoard {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 120px);
+  padding-right: 4px;
+}
+
+/* Thin scrollbar for Live Board */
+#liveBoard::-webkit-scrollbar {
+  width: 5px;
+}
+#liveBoard::-webkit-scrollbar-track {
+  background: transparent;
+}
+#liveBoard::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 10px;
+}
+#liveBoard::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.22);
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -848,30 +881,34 @@ th.mono {
 .pill.st-available,
 .pill.st-active,
 .pill.st-completed {
-  color: var(--green);
-  background: rgba(51, 214, 159, 0.12);
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 .pill.st-ontrip,
 .pill.st-dispatched {
-  color: var(--blue);
-  background: rgba(91, 157, 249, 0.12);
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
 .pill.st-inshop,
 .pill.st-draft,
 .pill.st-pending,
 .pill.st-offduty {
-  color: #0891b2;
-  background: rgba(6, 182, 212, 0.1);
+  color: #b45309;
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.25);
 }
 
 .pill.st-retired,
 .pill.st-cancelled,
 .pill.st-suspended,
 .pill.st-expired {
-  color: var(--red);
-  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .bar-track {
@@ -938,8 +975,8 @@ th.mono {
 .rule-note {
   font-size: 12px;
   color: var(--amber-dim);
-  background: rgba(242, 169, 59, 0.06);
-  border: 1px dashed rgba(242, 169, 59, 0.3);
+  background: rgba(217, 119, 6, 0.07);
+  border: 1px dashed rgba(217, 119, 6, 0.35);
   padding: 9px 12px;
   border-radius: 8px;
   margin-top: 14px;
@@ -958,13 +995,14 @@ th.mono {
 }
 
 .validation-box {
-  border: 1px solid rgba(242, 85, 91, 0.4);
-  background: rgba(242, 85, 91, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.07);
   border-radius: 8px;
   padding: 12px 14px;
   font-size: 12.8px;
   margin: 14px 0;
-  color: #ffb3b6;
+  /* Fixed: was near-invisible #ffb3b6 on a light pink background */
+  color: #991b1b;
   display: none;
 }
 
@@ -973,9 +1011,10 @@ th.mono {
 }
 
 .validation-box.ok {
-  border-color: rgba(51, 214, 159, 0.4);
-  background: rgba(51, 214, 159, 0.08);
-  color: #a6f2d8;
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.07);
+  /* Fixed: was near-invisible #a6f2d8 on a light green background */
+  color: #065f46;
 }
 
 .validation-box b {
@@ -1095,42 +1134,43 @@ th.mono {
 }
 
 .toggle-btn.active.av {
-  background: rgba(51, 214, 159, 0.15);
-  color: var(--green);
-  border-color: rgba(51, 214, 159, 0.4);
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.4);
 }
 
 .toggle-btn.active.ot {
-  background: rgba(91, 157, 249, 0.15);
-  color: var(--blue);
-  border-color: rgba(91, 157, 249, 0.4);
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.3);
 }
 
 .toggle-btn.active.od {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(100, 116, 139, 0.1);
   color: var(--muted);
+  border-color: rgba(100, 116, 139, 0.3);
 }
 
 .toggle-btn.active.sp {
-  background: rgba(242, 85, 91, 0.15);
-  color: var(--red);
-  border-color: rgba(242, 85, 91, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
 .toast {
   position: fixed;
   bottom: 26px;
   right: 26px;
-  background: var(--panel-3);
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: #1e293b;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #f1f5f9;
   padding: 13px 18px;
   border-radius: 9px;
   font-size: 13.5px;
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
   transform: translateY(20px);
   opacity: 0;
   transition: all .25s;
@@ -1242,3 +1282,128 @@ th.mono {
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================================================
+   ACCESS DENIED — Premium 403 Page
+   ===================================================== */
+
+.access-denied-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 40px 20px;
+  animation: ad-fadeIn 0.5s ease-out;
+}
+
+@keyframes ad-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.access-denied-card {
+  background: #ffffff;
+  border: 1px solid #e8ecf1;
+  border-radius: 20px;
+  padding: 48px 44px;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Shield icon wrapper */
+.ad-icon-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.ad-shield {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+  animation: ad-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes ad-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(220, 38, 38, 0);
+  }
+}
+
+/* 403 code */
+.ad-code {
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+/* Title */
+.ad-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+}
+
+/* Gradient divider */
+.ad-divider {
+  width: 60px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #10b981, #3b82f6);
+  margin: 0 auto 20px;
+}
+
+/* Message text */
+.ad-message {
+  font-size: 15px;
+  color: #475569;
+  line-height: 1.65;
+  margin: 0 0 12px 0;
+}
+
+/* Role badge inside message */
+.ad-role-badge {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  color: #ffffff;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+/* Hint / secondary text */
+.ad-hint {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 0;
+}

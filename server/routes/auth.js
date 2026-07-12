@@ -1,6 +1,6 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
-import User from '../models/User.js'
+import User, { MAX_ATTEMPTS, LOCK_TIME_MS } from '../models/User.js'
 
 const router = express.Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'transitops-secret'
@@ -34,10 +34,45 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials.' })
     }
 
+    // Check if account is locked
+    if (user.isLocked) {
+      const remainingMs = user.lockUntil - Date.now()
+      const remainingMin = Math.ceil(remainingMs / 60000)
+      return res.status(423).json({
+        success: false,
+        locked: true,
+        message: `Account is locked due to ${MAX_ATTEMPTS} failed attempts. Try again in ${remainingMin} minute${remainingMin !== 1 ? 's' : ''}.`,
+        lockUntil: user.lockUntil,
+      })
+    }
+
     const isMatch = await user.comparePassword(password)
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials.' })
+      // Increment failed attempts
+      await user.incLoginAttempts()
+
+      const attemptsLeft = MAX_ATTEMPTS - user.failedLoginAttempts
+      const nowLocked = user.failedLoginAttempts >= MAX_ATTEMPTS
+
+      if (nowLocked) {
+        const lockMin = Math.ceil(LOCK_TIME_MS / 60000)
+        return res.status(423).json({
+          success: false,
+          locked: true,
+          message: `Account locked after ${MAX_ATTEMPTS} failed attempts. Try again in ${lockMin} minutes.`,
+          lockUntil: user.lockUntil,
+        })
+      }
+
+      return res.status(401).json({
+        success: false,
+        message: `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining before account lockout.`,
+        attemptsLeft,
+      })
     }
+
+    // Successful login — reset failed attempts
+    await user.resetLoginAttempts()
 
     const token = createToken(user)
 

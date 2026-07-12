@@ -102,13 +102,13 @@ function AnalyticsView({
               const topMax = entries.length ? entries[0][1] : 1;
               const barColors = ['var(--red)', 'var(--amber)', 'var(--blue)'];
 
-              return entries.map((entry, i) => (
-                <div key={`${entry.name}-${i}`} className="brow">
-                  <span>{entry.name}</span>
+              return entries.map(([name, value], i) => (
+                <div key={`${name}-${i}`} className="brow">
+                  <span>{name}</span>
                   <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${(entry.value / topMax * 100)}%`, backgroundColor: barColors[i] || 'var(--blue)' }}></div>
+                    <div className="bar-fill" style={{ width: `${(value / topMax * 100)}%`, backgroundColor: barColors[i] || 'var(--blue)' }}></div>
                   </div>
-                  <span className="n" style={{ width: '70px' }}>{fmtMoney(entry.value)}</span>
+                  <span className="n" style={{ width: '70px' }}>{fmtMoney(value)}</span>
                 </div>
               ));
             })()}
