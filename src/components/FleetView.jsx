@@ -26,7 +26,8 @@ function FleetView({
   setVehValidation,
   saveVehicle,
   fmtMoney,
-  getPill
+  getPill,
+  canEdit
 }) {
   const filteredVehicles = vehicles.filter(v => {
     if (vfType !== 'Type: All' && v.type !== vfType) return false;
@@ -84,20 +85,22 @@ function FleetView({
           </div>
         </div>
 
-        <button
-          onClick={() => setShowAddVehicle(!showAddVehicle)}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 font-body-md font-bold hover:shadow-md hover:brightness-105 transition-all
-            ${showAddVehicle 
-              ? 'bg-surface text-primary border border-outline' 
-              : 'bg-secondary-container text-on-secondary-container'}`}
-        >
-          <span className="material-symbols-outlined text-[18px]">{showAddVehicle ? 'close' : 'add'}</span>
-          {showAddVehicle ? 'Close Form' : 'Add Vehicle'}
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => setShowAddVehicle(!showAddVehicle)}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 font-body-md font-bold hover:shadow-md hover:brightness-105 transition-all
+              ${showAddVehicle 
+                ? 'bg-surface text-primary border border-outline' 
+                : 'bg-secondary-container text-on-secondary-container'}`}
+          >
+            <span className="material-symbols-outlined text-[18px]">{showAddVehicle ? 'close' : 'add'}</span>
+            {showAddVehicle ? 'Close Form' : 'Add Vehicle'}
+          </button>
+        )}
       </div>
 
       {/* Register New Vehicle Form */}
-      {showAddVehicle && (
+      {canEdit && showAddVehicle && (
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-container-padding shadow-sm space-y-4">
           <h3 className="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
             <span className="material-symbols-outlined text-outline">local_shipping</span>

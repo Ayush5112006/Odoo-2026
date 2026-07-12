@@ -449,12 +449,16 @@ function App() {
     triggerToast('Signed out successfully');
   };
 
-  const checkAccess = (perm) => {
+  const checkAccess = (perm, type = 'any') => {
     if (!role) return false;
     if (perm === '__settings') {
       return role === 'Fleet Manager';
     }
-    return rbacAccess[role]?.includes(perm);
+    const allowed = rbacAccess[role] || [];
+    if (type === 'write') {
+      return allowed.includes(perm);
+    }
+    return allowed.includes(perm) || allowed.includes(`${perm}:view`);
   };
 
   const handleNavClick = (item) => {
@@ -690,10 +694,35 @@ function App() {
     }
   };
 
+  const handleRbacChange = (role, module, val) => {
+    setRbacAccess((prev) => {
+      const copy = { ...prev };
+      const currentAllowed = copy[role] ? [...copy[role]] : [];
+      
+      const filtered = currentAllowed.filter(
+        (perm) => perm !== module && perm !== `${module}:view`
+      );
+      
+      if (val === 'full') {
+        filtered.push(module);
+      } else if (val === 'view') {
+        filtered.push(`${module}:view`);
+      }
+      
+      copy[role] = filtered;
+      return copy;
+    });
+  };
+
   // Settings: Cloud Sync save
   const saveSettings = async () => {
     try {
-      await api.put('/settings', { depot: settingsDepot, currency: settingsCurrency, distanceUnit: settingsDistance });
+      await api.put('/settings', { 
+        depot: settingsDepot, 
+        currency: settingsCurrency, 
+        distanceUnit: settingsDistance,
+        rbacAccess
+      });
       triggerToast('Settings saved successfully');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Failed to save settings', true);
@@ -919,6 +948,7 @@ function App() {
               saveVehicle={saveVehicle}
               fmtMoney={fmtMoney}
               getPill={getPill}
+              canEdit={checkAccess('Fleet', 'write')}
             />
           )}
 
@@ -943,6 +973,7 @@ function App() {
               setDriverStatus={setDriverStatus}
               isLicenseExpired={isLicenseExpired}
               getPill={getPill}
+              canEdit={checkAccess('Drivers', 'write')}
             />
           )}
 
@@ -970,6 +1001,7 @@ function App() {
               cancelTrip={cancelTrip}
               isLicenseExpired={isLicenseExpired}
               getPill={getPill}
+              canEdit={checkAccess('Trips', 'write')}
             />
           )}
 
@@ -993,6 +1025,7 @@ function App() {
               closeMaintenance={closeMaintenance}
               fmtMoney={fmtMoney}
               getPill={getPill}
+              canEdit={checkAccess('Maintenance', 'write')}
             />
           )}
 
@@ -1012,6 +1045,7 @@ function App() {
               setFfCost={setFfCost}
               saveFuel={saveFuel}
               fmtMoney={fmtMoney}
+              canEdit={checkAccess('Fuel/Exp.', 'write')}
             />
           )}
 
@@ -1043,6 +1077,7 @@ function App() {
               triggerToast={saveSettings}
               rbacAccess={rbacAccess}
               rbacRoles={rbacRoles}
+              onRbacChange={handleRbacChange}
             />
           )}
         </main>

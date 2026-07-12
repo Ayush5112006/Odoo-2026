@@ -9,37 +9,39 @@ function SettingsView({
   setSettingsDistance,
   saveSettings,
   rbacAccess,
-  rbacRoles
+  rbacRoles,
+  onRbacChange
 }) {
   const modules = ['Fleet', 'Drivers', 'Trips', 'Fuel/Exp.', 'Analytics'];
 
   const renderPermission = (role, module) => {
     const allowed = rbacAccess?.[role] || [];
+    let currentVal = 'none';
     if (allowed.includes(module)) {
-      return (
-        <td className="px-4 py-3.5 text-center">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-tertiary-container text-on-tertiary-container">
-            <span className="material-symbols-outlined text-[16px] font-bold">check</span>
-          </span>
-        </td>
-      );
+      currentVal = 'full';
+    } else if (allowed.includes(`${module}:view`)) {
+      currentVal = 'view';
     }
-    if (
-      ((module === 'Fleet' || module === 'Trips') && role === 'Dispatcher') ||
-      (module === 'Trips' && role === 'Safety Officer') ||
-      (module === 'Fleet' && role === 'Financial Analyst')
-    ) {
-      return (
-        <td className="px-4 py-3.5 text-center">
-          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary-fixed text-on-primary-fixed uppercase tracking-wider">
-            view
-          </span>
-        </td>
-      );
+
+    let selectColorClass = 'bg-surface-container-low border-outline-variant text-on-surface-variant';
+    if (currentVal === 'full') {
+      selectColorClass = 'bg-tertiary-container/30 border-tertiary/30 text-on-tertiary-container font-bold';
+    } else if (currentVal === 'view') {
+      selectColorClass = 'bg-primary-container/30 border-primary/30 text-on-primary-container font-bold';
     }
+
     return (
-      <td className="px-4 py-3.5 text-center">
-        <span className="text-outline-variant font-mono">—</span>
+      <td className="px-4 py-2 text-center">
+        <select
+          value={currentVal}
+          onChange={(e) => onRbacChange(role, module, e.target.value)}
+          className={`px-2.5 py-1 rounded-lg border text-[11.5px] uppercase tracking-wider focus:outline-none transition-all cursor-pointer ${selectColorClass}`}
+          style={{ width: '82px', textAlign: 'center' }}
+        >
+          <option value="full">Full</option>
+          <option value="view">View</option>
+          <option value="none">None</option>
+        </select>
       </td>
     );
   };

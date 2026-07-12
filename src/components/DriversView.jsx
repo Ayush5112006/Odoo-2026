@@ -19,7 +19,8 @@ function DriversView({
   saveDriver,
   setDriverStatus,
   isLicenseExpired,
-  getPill
+  getPill,
+  canEdit
 }) {
   return (
     <section className="space-y-6">
@@ -30,20 +31,22 @@ function DriversView({
           <h1 className="font-headline-md text-headline-md text-primary">Drivers &amp; Safety Profiles</h1>
         </div>
 
-        <button
-          onClick={() => setShowAddDriver(!showAddDriver)}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 font-body-md font-bold hover:shadow-md hover:brightness-105 transition-all
-            ${showAddDriver 
-              ? 'bg-surface text-primary border border-outline' 
-              : 'bg-secondary-container text-on-secondary-container'}`}
-        >
-          <span className="material-symbols-outlined text-[18px]">{showAddDriver ? 'close' : 'person_add'}</span>
-          {showAddDriver ? 'Close Form' : 'Add Driver'}
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => setShowAddDriver(!showAddDriver)}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 font-body-md font-bold hover:shadow-md hover:brightness-105 transition-all
+              ${showAddDriver 
+                ? 'bg-surface text-primary border border-outline' 
+                : 'bg-secondary-container text-on-secondary-container'}`}
+          >
+            <span className="material-symbols-outlined text-[18px]">{showAddDriver ? 'close' : 'person_add'}</span>
+            {showAddDriver ? 'Close Form' : 'Add Driver'}
+          </button>
+        )}
       </div>
 
       {/* Register New Driver Form */}
-      {showAddDriver && (
+      {canEdit && showAddDriver && (
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-container-padding shadow-sm space-y-4">
           <h3 className="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
             <span className="material-symbols-outlined text-outline">badge</span>
@@ -180,7 +183,8 @@ function DriversView({
                       <select
                         value={d.status}
                         onChange={(e) => setDriverStatus(d._id, e.target.value)}
-                        className="px-2 py-1 bg-surface-container border border-outline-variant rounded text-xs text-on-surface focus:outline-none focus:border-secondary cursor-pointer"
+                        disabled={!canEdit}
+                        className="px-2 py-1 bg-surface-container border border-outline-variant rounded text-xs text-on-surface focus:outline-none focus:border-secondary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option>Available</option>
                         <option>On Trip</option>

@@ -14,7 +14,8 @@ function FuelView({
   ffCost,
   setFfCost,
   saveFuel,
-  fmtMoney
+  fmtMoney,
+  canEdit
 }) {
   return (
     <section className="space-y-6">
@@ -34,57 +35,61 @@ function FuelView({
         </h3>
 
         {/* Add Log Form */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="space-y-1.5">
-            <label className="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Vehicle</label>
-            <select
-              value={ffVehicle}
-              onChange={(e) => setFfVehicle(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface text-body-md focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary cursor-pointer"
-            >
-              {vehicles.map(v => (
-                <option key={v._id} value={v._id}>{v.name} ({v.reg})</option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Date</label>
-            <input
-              type="date"
-              value={ffDate}
-              onChange={(e) => setFfDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface text-body-md focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Liters</label>
-            <input
-              type="number"
-              placeholder="42"
-              value={ffLiters}
-              onChange={(e) => setFfLiters(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface text-body-md placeholder:text-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Cost (₹)</label>
-            <input
-              type="number"
-              placeholder="3150"
-              value={ffCost}
-              onChange={(e) => setFfCost(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface text-body-md placeholder:text-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
-            />
-          </div>
-        </div>
+        {canEdit && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <label className="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Vehicle</label>
+                <select
+                  value={ffVehicle}
+                  onChange={(e) => setFfVehicle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface text-body-md focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary cursor-pointer"
+                >
+                  {vehicles.map(v => (
+                    <option key={v._id} value={v._id}>{v.name} ({v.reg})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Date</label>
+                <input
+                  type="date"
+                  value={ffDate}
+                  onChange={(e) => setFfDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface text-body-md focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Liters</label>
+                <input
+                  type="number"
+                  placeholder="42"
+                  value={ffLiters}
+                  onChange={(e) => setFfLiters(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface text-body-md placeholder:text-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Cost (₹)</label>
+                <input
+                  type="number"
+                  placeholder="3150"
+                  value={ffCost}
+                  onChange={(e) => setFfCost(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface text-body-md placeholder:text-outline focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
+                />
+              </div>
+            </div>
 
-        <button
-          onClick={saveFuel}
-          className="bg-secondary-container text-on-secondary-container font-bold px-4 py-2 rounded-lg hover:shadow-md hover:brightness-105 transition-all text-body-md flex items-center gap-1.5"
-        >
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          Log Fuel
-        </button>
+            <button
+              onClick={saveFuel}
+              className="bg-secondary-container text-on-secondary-container font-bold px-4 py-2 rounded-lg hover:shadow-md hover:brightness-105 transition-all text-body-md flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              Log Fuel
+            </button>
+          </>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">

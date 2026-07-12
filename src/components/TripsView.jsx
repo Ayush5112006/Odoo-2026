@@ -22,7 +22,8 @@ function TripsView({
   completeTrip,
   cancelTrip,
   isLicenseExpired,
-  getPill
+  getPill,
+  canEdit
 }) {
   const availableVehicles = vehicles.filter(v => v.status === 'Available');
   const eligibleDrivers = drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.exp));
@@ -62,8 +63,9 @@ function TripsView({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Create Trip Form Card */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-container-padding shadow-sm space-y-4 flex flex-col justify-between">
-          <div>
+        {canEdit && (
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-container-padding shadow-sm space-y-4 flex flex-col justify-between">
+            <div>
             <h3 className="font-headline-sm text-headline-sm text-primary mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-outline">add_road</span>
               Create Trip
@@ -178,9 +180,10 @@ function TripsView({
             </button>
           </div>
         </div>
+      )}
 
         {/* Live Board Card */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-container-padding shadow-sm flex flex-col">
+        <div className={`bg-surface-container-lowest border border-outline-variant rounded-xl p-container-padding shadow-sm flex flex-col ${!canEdit ? 'col-span-1 lg:col-span-2' : ''}`}>
           <h3 className="font-headline-sm text-headline-sm text-primary mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-outline">dns</span>
             Live Board
@@ -214,7 +217,7 @@ function TripsView({
                   </div>
                 </div>
 
-                {t.status === 'Dispatched' && (
+                {canEdit && t.status === 'Dispatched' && (
                   <div className="flex items-center gap-2 pt-2 border-t border-outline-variant/30 mt-1">
                     <button
                       onClick={() => completeTrip(t._id)}

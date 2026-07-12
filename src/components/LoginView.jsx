@@ -197,17 +197,6 @@ function LoginView({
           >
             {loading ? 'Working…' : forgotMode ? 'Send reset link' : 'Sign in'}
           </button>
-
-          {/* Helper note */}
-          {!forgotMode && (
-            <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 text-xs text-on-surface-variant leading-relaxed mt-4">
-              <b className="text-on-surface">Access is scoped by role after login:</b><br />
-              • Fleet Manager → Fleet, Maintenance, Analytics<br />
-              • Dispatcher → Dashboard, Trips<br />
-              • Safety Officer → Drivers, Trips (view)<br />
-              • Financial Analyst → Fuel & Expenses, Analytics
-            </div>
-          )}
         </form>
       </div>
 
