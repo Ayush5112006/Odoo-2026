@@ -7,7 +7,7 @@ function SettingsView({
   setSettingsCurrency,
   settingsDistance,
   setSettingsDistance,
-  triggerToast
+  saveSettings
 }) {
   return (
     <section className="view" id="page-settings" style={{ display: 'block' }}>
@@ -29,7 +29,7 @@ function SettingsView({
             <label>Distance Unit</label>
             <input value={settingsDistance} onChange={(e) => setSettingsDistance(e.target.value)} />
           </div>
-          <button className="btn btn-primary" style={{ width: 'auto' }} onClick={() => triggerToast('Settings saved')}>Save changes</button>
+          <button className="btn btn-primary" style={{ width: 'auto' }} onClick={saveSettings}>Save changes</button>
         </div>
 
         <div className="card">

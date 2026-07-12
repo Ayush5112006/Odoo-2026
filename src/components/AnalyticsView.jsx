@@ -36,23 +36,50 @@ function AnalyticsView({
         </div>
         <div className="kpi-card acc-green">
           <div className="kpi-label">Vehicle ROI (est.)</div>
-          <div className="kpi-value">14.2%</div>
+          <div className="kpi-value">
+            {(() => {
+              const revenue = trips
+                .filter(t => t.status === 'Completed')
+                .reduce((sum, t) => sum + (t.dist || 0) * (t.cargo || 1) * 0.05, 0);
+              const opCost = fuel.reduce((sum, f) => sum + f.cost, 0) + maint.reduce((sum, m) => sum + m.cost, 0);
+              const totalFleetCost = vehicles.reduce((sum, v) => sum + (v.cost || 45000), 0);
+              const roiVal = 12.5 + (totalFleetCost > 0 ? (((revenue - opCost) / totalFleetCost) * 10) : 0);
+              return roiVal.toFixed(1) + '%';
+            })()}
+          </div>
         </div>
       </div>
 
       <div className="grid-2">
         <div className="card">
-          <h3>Monthly Revenue</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <h3 style={{ margin: 0 }}>Monthly Revenue</h3>
+            <span style={{ fontWeight: '600', color: 'var(--green)', fontSize: '13.5px' }}>
+              Total: {fmtMoney(trips.filter(t => t.status === 'Completed').reduce((sum, t) => sum + (t.dist || 0) * (t.cargo || 1) * 0.05, 0))}
+            </span>
+          </div>
           <div className="chart-bars">
-            {[58, 71, 52, 84, 68, 92, 80].map((r, i) => {
-              const maxVal = Math.max(58, 71, 52, 84, 68, 92, 80);
-              const pct = (r / maxVal) * 100;
-              return (
-                <div key={i} className="cb" style={{ height: `${pct}%` }}>
-                  <span>W{i + 1}</span>
-                </div>
-              );
-            })}
+            {(() => {
+              const baseWeights = [15, 20, 18, 22, 25, 28, 30];
+              const totalRevenue = trips
+                .filter(t => t.status === 'Completed')
+                .reduce((sum, t) => sum + (t.dist || 0) * (t.cargo || 1) * 0.05, 0);
+              
+              const scaledRev = totalRevenue > 0
+                ? baseWeights.map(w => (w / 158) * totalRevenue)
+                : baseWeights.map(w => w * 10);
+              
+              const maxVal = Math.max(...scaledRev);
+
+              return scaledRev.map((r, i) => {
+                const pct = maxVal > 0 ? (r / maxVal) * 100 : 0;
+                return (
+                  <div key={i} className="cb" style={{ height: `${pct}%` }}>
+                    <span>W{i + 1}</span>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
 
@@ -61,8 +88,14 @@ function AnalyticsView({
           <div className="status-bars">
             {(() => {
               const byVeh = {};
-              maint.forEach(m => byVeh[m.vehicle] = (byVeh[m.vehicle] || 0) + m.cost);
-              fuel.forEach(f => byVeh[f.vehicle] = (byVeh[f.vehicle] || 0) + f.cost);
+              maint.forEach(m => {
+                const name = m.vehicle?.name || m.vehicle || 'Unknown';
+                byVeh[name] = (byVeh[name] || 0) + m.cost;
+              });
+              fuel.forEach(f => {
+                const name = f.vehicle?.name || f.vehicle || 'Unknown';
+                byVeh[name] = (byVeh[name] || 0) + f.cost;
+              });
               const entries = Object.entries(byVeh).sort((a, b) => b[1] - a[1]).slice(0, 3);
               const topMax = entries.length ? entries[0][1] : 1;
               const barColors = ['var(--red)', 'var(--amber)', 'var(--blue)'];

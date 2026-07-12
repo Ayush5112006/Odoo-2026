@@ -923,7 +923,7 @@ function App() {
               setSettingsCurrency={setSettingsCurrency}
               settingsDistance={settingsDistance}
               setSettingsDistance={setSettingsDistance}
-              triggerToast={saveSettings} // Trigger saveSettings API
+              saveSettings={saveSettings}
             />
           )}
         </div>
