@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TransitOps — Smart Transport Operations Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a1120;
+    --panel:#111b2e;
+    --panel-2:#16223a;
+    --panel-3:#1c2a45;
+    --border:#253253;
+    --border-soft:#1c2842;
+    --text:#eaeefb;
+    --muted:#8b96b3;
+    --muted-2:#5f6a8a;
+    --amber:#f2a93b;
+    --amber-dim:#c9822b;
+    --green:#33d69f;
+    --green-dim:#1f8a67;
+    --blue:#5b9df9;
+    --red:#f2555b;
+    --purple:#a685f2;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 100% -10%, rgba(91,157,249,0.08), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(242,169,59,0.06), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:rgba(242,169,59,0.3);}
+  a{color:inherit;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+
+  /* ===== Route-line signature motif ===== */
+  .route-line{
+    position:relative;height:2px;background:
+      repeating-linear-gradient(90deg, var(--muted-2) 0 10px, transparent 10px 20px);
+    margin:0; opacity:0.55;
+  }
+  .route-line .marker{
+    position:absolute; top:50%; left:0; transform:translate(-50%,-50%);
+    width:9px;height:9px;border-radius:50%;background:var(--amber);
+    box-shadow:0 0 0 4px rgba(242,169,59,0.15), 0 0 12px rgba(242,169,59,0.6);
+    animation: travel 6s linear infinite;
+  }
+  @keyframes travel{
+    0%{left:0%;}
+    100%{left:100%;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .route-line .marker{animation:none; left:30%;}
+  }
+
+  /* ===== LOGIN ===== */
+  #view-login{
+    min-height:100vh; display:grid; grid-template-columns: 1.05fr 1fr;
+  }
+  .login-side{
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%),
+      var(--panel);
+    border-right:1px solid var(--border);
+    padding:56px 60px; display:flex; flex-direction:column; position:relative; overflow:hidden;
+  }
+  .login-side::after{
+    content:"";position:absolute; inset:auto -10% -30% -10%; height:60%;
+    background:radial-gradient(closest-side, rgba(91,157,249,0.10), transparent 70%);
+    pointer-events:none;
+  }
+  .brand-mark{
+    width:44px;height:44px;border-radius:9px;
+    background:linear-gradient(135deg, var(--amber), var(--amber-dim));
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;color:#1a1200;font-size:20px;
+    box-shadow:0 6px 20px rgba(242,169,59,0.25);
+  }
+  .brand-row{display:flex;align-items:center;gap:14px;margin-bottom:6px;}
+  .brand-name{font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:-0.02em;}
+  .brand-tag{color:var(--muted);font-size:13.5px;margin:0 0 40px 58px;}
+  .login-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;color:var(--amber);text-transform:uppercase;margin-bottom:14px;}
+  .login-headline{font-family:var(--font-display);font-size:34px;line-height:1.15;font-weight:600;max-width:420px;margin:0 0 10px;}
+  .login-sub{color:var(--muted);font-size:14.5px;max-width:380px;line-height:1.6;margin-bottom:34px;}
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:auto;}
+  .role-card{
+    border:1px solid var(--border-soft); border-radius:var(--radius); padding:14px 16px;
+    background:var(--panel-2);
+  }
+  .role-card .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:8px;}
+  .role-card b{font-size:13.5px;font-family:var(--font-display);}
+  .role-card p{margin:6px 0 0;font-size:12px;color:var(--muted);line-height:1.5;}
+  .login-foot{margin-top:36px;font-size:11.5px;color:var(--muted-2);font-family:var(--font-mono);}
+
+  .login-form-wrap{
+    display:flex;align-items:center;justify-content:center;padding:40px;
+  }
+  .login-form{width:100%;max-width:380px;}
+  .login-form h2{font-family:var(--font-display);font-size:23px;margin:0 0 6px;font-weight:600;}
+  .login-form .sub{color:var(--muted);font-size:13.5px;margin:0 0 28px;}
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-weight:600;}
+  .field input, .field select{
+    width:100%;padding:11px 13px;border-radius:8px;border:1px solid var(--border);
+    background:var(--panel-2); color:var(--text); font-size:14px; font-family:var(--font-body);
+    outline:none; transition:border-color .15s;
+  }
+  .field input::placeholder{color:var(--muted-2);}
+  .field input:focus, .field select:focus{border-color:var(--amber);}
+  .field.mono input{font-family:var(--font-mono);}
+  .row-between{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;font-size:13px;}
+  .row-between label{display:flex;align-items:center;gap:8px;color:var(--muted);cursor:pointer;}
+  .link-muted{color:var(--blue);text-decoration:none;font-size:13px;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:12px 20px;border-radius:8px;border:none;cursor:pointer;
+    font-family:var(--font-body); font-weight:600; font-size:14px; transition:transform .1s, box-shadow .15s, background .15s;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:linear-gradient(180deg, var(--amber), var(--amber-dim));color:#1a1200;width:100%;
+    box-shadow:0 8px 20px rgba(242,169,59,0.18);}
+  .btn-primary:hover{box-shadow:0 10px 26px rgba(242,169,59,0.28);}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn-ghost:hover{border-color:var(--muted-2);}
+  .btn-danger{background:rgba(242,85,91,0.12); color:var(--red); border:1px solid rgba(242,85,91,0.35);}
+  .btn-sm{padding:7px 12px;font-size:12.5px;border-radius:7px;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .helper-note{font-size:12px;color:var(--muted-2);margin-top:24px;line-height:1.6;padding-top:18px;border-top:1px solid var(--border-soft);}
+  .helper-note b{color:var(--muted);}
+  .error-banner{
+    display:none; align-items:center;gap:8px; background:rgba(242,85,91,0.1); border:1px solid rgba(242,85,91,0.35);
+    color:var(--red); padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:16px;
+  }
+
+  /* ===== APP SHELL ===== */
+  #app{display:none;min-height:100vh;grid-template-columns:236px 1fr;}
+  #app.active{display:grid;}
+  .sidebar{
+    background:var(--panel); border-right:1px solid var(--border);
+    padding:22px 16px; display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+  }
+  .side-brand{display:flex;align-items:center;gap:10px;padding:0 8px;margin-bottom:6px;}
+  .side-brand .brand-mark{width:32px;height:32px;font-size:15px;border-radius:7px;}
+  .side-brand span{font-family:var(--font-display);font-weight:700;font-size:16.5px;}
+  .side-route{margin:14px 8px 18px;}
+  .nav-group-label{font-size:10.5px;letter-spacing:0.1em;color:var(--muted-2);text-transform:uppercase;padding:14px 12px 6px;font-weight:600;}
+  .navitem{
+    display:flex;align-items:center;gap:11px; padding:10px 12px;border-radius:8px;margin:2px 0;
+    color:var(--muted); font-size:13.6px; font-weight:500; cursor:pointer; border:1px solid transparent;
+    transition:background .12s, color .12s;
+  }
+  .navitem svg{width:17px;height:17px;flex-shrink:0;opacity:0.85;}
+  .navitem:hover{background:var(--panel-2); color:var(--text);}
+  .navitem.active{background:rgba(242,169,59,0.1); color:var(--amber); border-color:rgba(242,169,59,0.25);}
+  .navitem.active svg{opacity:1;}
+  .navitem.locked{opacity:0.35; cursor:not-allowed;}
+  .navitem.locked:hover{background:transparent;color:var(--muted);}
+  .sidebar-foot{margin-top:auto;padding:14px 10px 4px;border-top:1px solid var(--border-soft);}
+  .sidebar-foot .role-pill{font-family:var(--font-mono);font-size:11px;color:var(--muted-2);}
+  .logout-link{font-size:12px;color:var(--red);cursor:pointer;margin-top:8px;display:inline-block;}
+
+  .main{padding:0; overflow-x:hidden;}
+  .topbar{
+    display:flex;align-items:center;gap:16px;padding:16px 32px; border-bottom:1px solid var(--border);
+    background:rgba(17,27,46,0.6); backdrop-filter:blur(6px); position:sticky; top:0; z-index:5;
+  }
+  .search{
+    flex:1; max-width:360px; display:flex;align-items:center;gap:8px;
+    background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:9px 12px;
+  }
+  .search svg{width:15px;height:15px;color:var(--muted-2);flex-shrink:0;}
+  .search input{background:none;border:none;outline:none;color:var(--text);font-size:13.5px;width:100%;font-family:var(--font-body);}
+  .search input::placeholder{color:var(--muted-2);}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px;}
+  .user-chip{display:flex;align-items:center;gap:9px;}
+  .user-chip .name{font-size:13.5px;font-weight:500;}
+  .user-chip .role-badge{
+    font-family:var(--font-mono);font-size:10.5px; padding:4px 9px;border-radius:20px;
+    background:rgba(91,157,249,0.12); color:var(--blue); border:1px solid rgba(91,157,249,0.3);
+  }
+  .avatar{
+    width:32px;height:32px;border-radius:50%; background:linear-gradient(135deg,var(--purple),var(--blue));
+    display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:var(--font-display);
+  }
+
+  .content{padding:28px 32px 60px;}
+  .page-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+  .page-head h1{font-family:var(--font-display);font-size:22px;margin:0;font-weight:600;letter-spacing:-0.01em;}
+  .page-head .eyebrow{font-family:var(--font-mono);font-size:11px;color:var(--amber);letter-spacing:0.1em;text-transform:uppercase;display:block;margin-bottom:6px;}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit, minmax(150px,1fr));gap:14px;margin-bottom:22px;}
+  .kpi-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px;
+    border-top:2.5px solid var(--border);
+  }
+  .kpi-card.acc-blue{border-top-color:var(--blue);}
+  .kpi-card.acc-green{border-top-color:var(--green);}
+  .kpi-card.acc-amber{border-top-color:var(--amber);}
+  .kpi-card.acc-red{border-top-color:var(--red);}
+  .kpi-label{font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:600;}
+  .kpi-value{font-family:var(--font-mono);font-size:26px;font-weight:600;}
+
+  .grid-2{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;}
+  .card h3{font-family:var(--font-display);font-size:14px;margin:0 0 16px;font-weight:600;color:var(--text);letter-spacing:0.01em;
+    display:flex;align-items:center;justify-content:space-between;}
+  .card h3 .tag{font-family:var(--font-mono);font-size:10.5px;color:var(--muted-2);font-weight:400;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.2px;}
+  thead th{
+    text-align:left;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);
+    font-weight:600;padding:0 10px 10px; border-bottom:1px solid var(--border);
+  }
+  tbody td{padding:12px 10px;border-bottom:1px solid var(--border-soft);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:rgba(255,255,255,0.015);}
+  td.mono, th.mono{font-family:var(--font-mono);}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;
+    font-family:var(--font-body);
+  }
+  .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .pill.st-available, .pill.st-active, .pill.st-completed{color:var(--green);background:rgba(51,214,159,0.12);}
+  .pill.st-ontrip, .pill.st-dispatched{color:var(--blue);background:rgba(91,157,249,0.12);}
+  .pill.st-inshop, .pill.st-draft, .pill.st-pending, .pill.st-offduty{color:var(--amber);background:rgba(242,169,59,0.12);}
+  .pill.st-retired, .pill.st-cancelled, .pill.st-suspended, .pill.st-expired{color:var(--red);background:rgba(242,85,91,0.12);}
+
+  .bar-track{height:8px;border-radius:6px;background:var(--panel-3);overflow:hidden;}
+  .bar-fill{height:100%;border-radius:6px;}
+  .status-bars .brow{display:grid;grid-template-columns:80px 1fr 30px;gap:10px;align-items:center;margin-bottom:12px;font-size:12.5px;color:var(--muted);}
+  .status-bars .brow .n{font-family:var(--font-mono);color:var(--text);text-align:right;}
+
+  .filter-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .filter-row select, .filter-row input{
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:9px 12px;border-radius:8px;font-size:13px;font-family:var(--font-body);outline:none;
+  }
+  .filter-row select:focus, .filter-row input:focus{border-color:var(--amber);}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;}
+
+  .rule-note{
+    font-size:12px;color:var(--amber-dim); background:rgba(242,169,59,0.06); border:1px dashed rgba(242,169,59,0.3);
+    padding:9px 12px;border-radius:8px;margin-top:14px; font-family:var(--font-mono); line-height:1.6;
+  }
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;}
+  .form-grid .full{grid-column:1/-1;}
+
+  .validation-box{
+    border:1px solid rgba(242,85,91,0.4); background:rgba(242,85,91,0.08); border-radius:8px;
+    padding:12px 14px; font-size:12.8px; margin:14px 0; color:#ffb3b6; display:none;
+  }
+  .validation-box.ok{border-color:rgba(51,214,159,0.4); background:rgba(51,214,159,0.08); color:#a6f2d8;}
+  .validation-box b{display:block;margin-bottom:2px;}
+
+  .lifecycle{display:flex;align-items:center;gap:0;margin-bottom:24px;}
+  .lc-step{display:flex;align-items:center;gap:8px;}
+  .lc-dot{width:11px;height:11px;border-radius:50%;background:var(--border);border:2px solid var(--border);}
+  .lc-step.done .lc-dot{background:var(--green);border-color:var(--green);}
+  .lc-step.now .lc-dot{background:var(--blue);border-color:var(--blue);box-shadow:0 0 0 4px rgba(91,157,249,0.15);}
+  .lc-step.cancel .lc-dot{background:var(--red);border-color:var(--red);}
+  .lc-label{font-size:12px;color:var(--muted);font-family:var(--font-mono);}
+  .lc-step.done .lc-label{color:var(--green);}
+  .lc-step.now .lc-label{color:var(--blue);}
+  .lc-line{width:56px;height:1px;background:var(--border);margin:0 10px;}
+
+  .board-item{border:1px solid var(--border-soft);border-radius:9px;padding:13px 14px;margin-bottom:10px;background:var(--panel-2);}
+  .board-item .top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+  .board-item .tripid{font-family:var(--font-mono);font-size:12px;color:var(--muted);}
+  .board-item .route{font-size:13.5px;margin:4px 0 8px;}
+  .board-item .meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted-2);font-family:var(--font-mono);}
+
+  .toggle-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .toggle-btn{padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--panel-2);color:var(--muted);font-size:12.5px;cursor:pointer;font-weight:600;}
+  .toggle-btn.active.av{background:rgba(51,214,159,0.15);color:var(--green);border-color:rgba(51,214,159,0.4);}
+  .toggle-btn.active.ot{background:rgba(91,157,249,0.15);color:var(--blue);border-color:rgba(91,157,249,0.4);}
+  .toggle-btn.active.od{background:rgba(255,255,255,0.06);color:var(--muted);}
+  .toggle-btn.active.sp{background:rgba(242,85,91,0.15);color:var(--red);border-color:rgba(242,85,91,0.4);}
+
+  .toast{
+    position:fixed; bottom:26px; right:26px; background:var(--panel-3); border:1px solid var(--border);
+    color:var(--text); padding:13px 18px;border-radius:9px; font-size:13.5px; display:flex;align-items:center;gap:10px;
+    box-shadow:0 12px 30px rgba(0,0,0,0.4); transform:translateY(20px); opacity:0; transition:all .25s; z-index:100;
+  }
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast .dot{width:8px;height:8px;border-radius:50%;background:var(--green);}
+  .toast.err .dot{background:var(--red);}
+
+  .rbac-table td, .rbac-table th{text-align:center;}
+  .rbac-table td:first-child, .rbac-table th:first-child{text-align:left;}
+  .perm{font-size:15px;}
+  .perm.yes{color:var(--green);}
+  .perm.view{color:var(--blue);font-size:11px;font-family:var(--font-mono);}
+  .perm.no{color:var(--muted-2);}
+
+  .chart-bars{display:flex;align-items:flex-end;gap:12px;height:170px;margin-top:6px;}
+  .chart-bars .cb{flex:1;background:linear-gradient(180deg,var(--blue),#2f5fb8);border-radius:5px 5px 0 0;position:relative;min-height:6px;}
+  .chart-bars .cb span{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted-2);font-family:var(--font-mono);}
+
+  .empty-help{font-size:12.5px;color:var(--muted-2);text-align:center;padding:30px 10px;}
+
+  @media (max-width:900px){
+    #view-login{grid-template-columns:1fr;}
+    .login-side{display:none;}
+    #app{grid-template-columns:1fr;}
+    .sidebar{display:none;}
+    .grid-2{grid-template-columns:1fr;}
+    .form-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN VIEW ============ -->
+<div id="view-login">
+  <div class="login-side">
+    <div class="brand-row">
+      <div class="brand-mark">T</div>
+      <div class="brand-name">TransitOps</div>
+    </div>
+    <p class="brand-tag">Smart Transport Operations Platform</p>
+
+    <div class="login-eyebrow">Fleet · Drivers · Dispatch · Costs</div>
+    <h1 class="login-headline">One login, four roles. Every vehicle accounted for.</h1>
+    <p class="login-sub">Replace the spreadsheet and the logbook with a single source of truth for dispatch, maintenance, and expenses — enforced by rules, not by memory.</p>
+
+    <div class="route-line" style="margin:20px 0 34px;"><div class="marker"></div></div>
+
+    <div class="role-grid">
+      <div class="role-card"><span class="dot" style="background:var(--blue)"></span><b>Fleet Manager</b><p>Fleet, maintenance & lifecycle oversight</p></div>
+      <div class="role-card"><span class="dot" style="background:var(--amber)"></span><b>Dispatcher</b><p>Creates & tracks live trips</p></div>
+      <div class="role-card"><span class="dot" style="background:var(--green)"></span><b>Safety Officer</b><p>License validity & driver compliance</p></div>
+      <div class="role-card"><span class="dot" style="background:var(--purple)"></span><b>Financial Analyst</b><p>Costs, fuel & profitability</p></div>
+    </div>
+    <div class="login-foot">TRANSITOPS © 2026 · RBAC ENABLED · GANDHINAGAR DEPOT GJ4</div>
+  </div>
+
+  <div class="login-form-wrap">
+    <div class="login-form">
+      <h2>Sign in to your account</h2>
+      <p class="sub">Enter your credentials to continue</p>
+
+      <div class="error-banner" id="loginError">✕ Invalid credentials. Try any email/password — this is a live demo build.</div>
+
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="raven.k@transitops.in" value="raven.k@transitops.in">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="••••••••" value="demo1234">
+      </div>
+      <div class="field">
+        <label>Role (RBAC)</label>
+        <select id="loginRole">
+          <option value="Fleet Manager">Fleet Manager</option>
+          <option value="Dispatcher" selected>Dispatcher</option>
+          <option value="Safety Officer">Safety Officer</option>
+          <option value="Financial Analyst">Financial Analyst</option>
+        </select>
+      </div>
+      <div class="row-between">
+        <label><input type="checkbox" checked style="accent-color:var(--amber);"> Remember me</label>
+        <a class="link-muted" href="#">Forgot password?</a>
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Sign in</button>
+
+      <div class="helper-note">
+        <b>Access is scoped by role after login:</b><br>
+        • Fleet Manager → Fleet, Maintenance, Analytics<br>
+        • Dispatcher → Dashboard, Trips<br>
+        • Safety Officer → Drivers, Trips (view)<br>
+        • Financial Analyst → Fuel & Expenses, Analytics
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app">
+  <div class="sidebar">
+    <div class="side-brand"><div class="brand-mark">T</div><span>TransitOps</span></div>
+    <div class="side-route route-line"><div class="marker"></div></div>
+
+    <div class="nav-group-label">Operate</div>
+    <div class="navitem" data-view="dashboard" data-perm="Dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>
+      Dashboard
+    </div>
+    <div class="navitem" data-view="fleet" data-perm="Fleet">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 13l1.5-5A2 2 0 0 1 6.4 6.5h11.2A2 2 0 0 1 19.5 8l1.5 5"/><rect x="2" y="13" width="20" height="5" rx="1.5"/><circle cx="7" cy="18.5" r="1.6"/><circle cx="17" cy="18.5" r="1.6"/></svg>
+      Fleet
+    </div>
+    <div class="navitem" data-view="drivers" data-perm="Drivers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+      Drivers
+    </div>
+    <div class="navitem" data-view="trips" data-perm="Trips">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19l5-14 3 9 3-6 5 11"/></svg>
+      Trips
+    </div>
+
+    <div class="nav-group-label">Manage</div>
+    <div class="navitem" data-view="maintenance" data-perm="Maintenance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4L15 12l-1-1z"/></svg>
+      Maintenance
+    </div>
+    <div class="navitem" data-view="fuel" data-perm="Fuel/Exp.">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 21V6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v15M6 21h9M6 10h7M15 8l2.5 2.5V17a1.5 1.5 0 0 0 3 0v-5l-2-2"/></svg>
+      Fuel &amp; Expenses
+    </div>
+    <div class="navitem" data-view="analytics" data-perm="Analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M11 20V4M18 20v-7"/></svg>
+      Analytics
+    </div>
+    <div class="navitem" data-view="settings" data-perm="__settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings &amp; RBAC
+    </div>
+
+    <div class="sidebar-foot">
+      <div class="role-pill" id="sideRolePill">ROLE: —</div>
+      <span class="logout-link" onclick="logout()">Sign out</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="globalSearch" placeholder="Search vehicles, drivers, trips…" oninput="handleGlobalSearch()">
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip">
+          <div>
+            <div class="name" id="topUserName">Raven K.</div>
+          </div>
+          <span class="role-badge" id="topRoleBadge">DISPATCHER</span>
+        </div>
+        <div class="avatar" id="topAvatar">RK</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ===== DASHBOARD ===== -->
+      <section class="view" id="page-dashboard">
+        <div class="page-head">
+          <div><span class="eyebrow">Live Overview</span><h1>Dashboard</h1></div>
+        </div>
+        <div class="filter-row">
+          <select id="fVehType"><option>Vehicle Type: All</option><option>Van</option><option>Truck</option><option>Mini Truck</option></select>
+          <select id="fStatus"><option>Status: All</option><option>Available</option><option>On Trip</option><option>In Shop</option><option>Retired</option></select>
+          <select id="fRegion"><option>Region: All</option><option>Gandhinagar</option><option>Ahmedabad</option><option>Vatva</option></select>
+        </div>
+        <div class="kpi-row" id="kpiRow"></div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Recent Trips <span class="tag">live board</span></h3>
+            <table>
+              <thead><tr><th>Trip</th><th>Vehicle</th><th>Driver</th><th>Status</th><th>ETA</th></tr></thead>
+              <tbody id="dashTripsBody"></tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3>Vehicle Status</h3>
+            <div class="status-bars" id="statusBars"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== FLEET / VEHICLE REGISTRY ===== -->
+      <section class="view" id="page-fleet">
+        <div class="page-head">
+          <div><span class="eyebrow">Master Registry</span><h1>Vehicle Registry</h1></div>
+        </div>
+        <div class="toolbar">
+          <div class="filter-row" style="margin:0;">
+            <select id="vfType"><option>Type: All</option><option>Van</option><option>Truck</option><option>Mini Truck</option></select>
+            <select id="vfStatus" onchange="renderFleet()"><option>Status: All</option><option>Available</option><option>On Trip</option><option>In Shop</option><option>Retired</option></select>
+            <input type="text" id="vfReg" placeholder="Search reg. no…" oninput="renderFleet()">
+          </div>
+          <button class="btn btn-primary" style="width:auto;" onclick="openAddVehicle()">+ Add Vehicle</button>
+        </div>
+
+        <div class="card" id="addVehicleCard" style="display:none;margin-bottom:18px;">
+          <h3>Register New Vehicle <span class="tag">reg. no. must be unique</span></h3>
+          <div class="form-grid">
+            <div class="field"><label>Registration No.</label><input id="nvReg" placeholder="GJ01AB1234" class="mono-input"></div>
+            <div class="field"><label>Name / Model</label><input id="nvName" placeholder="VAN-09"></div>
+            <div class="field"><label>Type</label>
+              <select id="nvType"><option>Van</option><option>Truck</option><option>Mini Truck</option></select>
+            </div>
+            <div class="field"><label>Max Capacity (kg)</label><input id="nvCap" type="number" placeholder="500"></div>
+            <div class="field"><label>Odometer (km)</label><input id="nvOdo" type="number" placeholder="0"></div>
+            <div class="field"><label>Acquisition Cost (₹)</label><input id="nvCost" type="number" placeholder="600000"></div>
+          </div>
+          <div class="validation-box" id="vehValidation"></div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-primary" style="width:auto;" onclick="saveVehicle()">Save vehicle</button>
+            <button class="btn btn-ghost" onclick="document.getElementById('addVehicleCard').style.display='none'">Cancel</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <table>
+            <thead><tr><th>Reg. No.</th><th>Name/Model</th><th>Type</th><th>Capacity</th><th>Odometer</th><th>Acq. Cost</th><th>Status</th></tr></thead>
+            <tbody id="fleetBody"></tbody>
+          </table>
+          <div class="rule-note">RULE · Registration number must be unique · Retired / In Shop vehicles are hidden from the trip dispatcher's vehicle pool.</div>
+        </div>
+      </section>
+
+      <!-- ===== DRIVERS ===== -->
+      <section class="view" id="page-drivers">
+        <div class="page-head">
+          <div><span class="eyebrow">Compliance</span><h1>Drivers &amp; Safety Profiles</h1></div>
+        </div>
+        <div class="toolbar">
+          <div></div>
+          <button class="btn btn-primary" style="width:auto;" onclick="openAddDriver()">+ Add Driver</button>
+        </div>
+
+        <div class="card" id="addDriverCard" style="display:none;margin-bottom:18px;">
+          <h3>Register New Driver</h3>
+          <div class="form-grid">
+            <div class="field"><label>Name</label><input id="ndName" placeholder="Kiran"></div>
+            <div class="field"><label>License No.</label><input id="ndLic" placeholder="DL-00000"></div>
+            <div class="field"><label>Category</label><select id="ndCat"><option>LMV</option><option>HMV</option></select></div>
+            <div class="field"><label>License Expiry (MM/YYYY)</label><input id="ndExp" placeholder="12/2028"></div>
+            <div class="field"><label>Contact</label><input id="ndContact" placeholder="98xxxxxxxx"></div>
+            <div class="field"><label>Safety Score (%)</label><input id="ndScore" type="number" placeholder="90"></div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-primary" style="width:auto;" onclick="saveDriver()">Save driver</button>
+            <button class="btn btn-ghost" onclick="document.getElementById('addDriverCard').style.display='none'">Cancel</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <table>
+            <thead><tr><th>Driver</th><th>License No.</th><th>Category</th><th>Expiry</th><th>Contact</th><th>Trip Compl.</th><th>Safety</th><th>Status</th></tr></thead>
+            <tbody id="driversBody"></tbody>
+          </table>
+          <div class="toggle-row" style="margin-top:18px;">
+            <span style="font-size:11px;color:var(--muted-2);align-self:center;margin-right:4px;font-family:var(--font-mono);">TOGGLE STATUS →</span>
+          </div>
+          <div class="rule-note">RULE · Expired license or Suspended status blocks assignment to any trip.</div>
+        </div>
+      </section>
+
+      <!-- ===== TRIPS ===== -->
+      <section class="view" id="page-trips">
+        <div class="page-head">
+          <div><span class="eyebrow">Dispatch Control</span><h1>Trip Dispatch</h1></div>
+        </div>
+        <div class="lifecycle" id="lifecycleTrack"></div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Create Trip</h3>
+            <div class="form-grid">
+              <div class="field full"><label>Source</label><input id="tSource" placeholder="Gandhinagar Depot" value="Gandhinagar Depot"></div>
+              <div class="field full"><label>Destination</label><input id="tDest" placeholder="Ahmedabad Hub" value="Ahmedabad Hub"></div>
+              <div class="field"><label>Vehicle (available only)</label><select id="tVehicle" onchange="validateTrip()"></select></div>
+              <div class="field"><label>Driver (available only)</label><select id="tDriver" onchange="validateTrip()"></select></div>
+              <div class="field"><label>Cargo Weight (kg)</label><input id="tCargo" type="number" value="450" oninput="validateTrip()"></div>
+              <div class="field"><label>Planned Distance (km)</label><input id="tDist" type="number" value="38"></div>
+            </div>
+            <div class="validation-box" id="tripValidation"></div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn btn-primary" style="width:auto;" id="dispatchBtn" onclick="createAndDispatch()">Create &amp; Dispatch</button>
+              <button class="btn btn-ghost" onclick="createDraft()">Save as Draft</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Live Board</h3>
+            <div id="liveBoard"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== MAINTENANCE ===== -->
+      <section class="view" id="page-maintenance">
+        <div class="page-head">
+          <div><span class="eyebrow">Vehicle Lifecycle</span><h1>Maintenance</h1></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Log Service Record</h3>
+            <div class="field"><label>Vehicle</label><select id="mVehicle"></select></div>
+            <div class="field"><label>Service Type</label><input id="mType" placeholder="Oil Change"></div>
+            <div class="field"><label>Cost (₹)</label><input id="mCost" type="number" placeholder="2500"></div>
+            <div class="field"><label>Date</label><input id="mDate" type="date"></div>
+            <button class="btn btn-primary" style="width:auto;" onclick="saveMaintenance()">Save &amp; put vehicle In Shop</button>
+            <div class="rule-note">Available → In Shop on save · Completing a record restores the vehicle to Available (unless Retired) · In Shop vehicles are removed from the dispatch pool.</div>
+          </div>
+          <div class="card">
+            <h3>Service Log</h3>
+            <table>
+              <thead><tr><th>Vehicle</th><th>Service</th><th>Cost</th><th>Status</th><th></th></tr></thead>
+              <tbody id="maintBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== FUEL & EXPENSES ===== -->
+      <section class="view" id="page-fuel">
+        <div class="page-head">
+          <div><span class="eyebrow">Cost Tracking</span><h1>Fuel &amp; Expense Management</h1></div>
+        </div>
+        <div class="card" style="margin-bottom:18px;">
+          <h3>Fuel Logs</h3>
+          <div class="form-grid" style="margin-bottom:14px;">
+            <div class="field"><label>Vehicle</label><select id="ffVehicle"></select></div>
+            <div class="field"><label>Date</label><input id="ffDate" type="date"></div>
+            <div class="field"><label>Liters</label><input id="ffLiters" type="number" placeholder="42"></div>
+            <div class="field"><label>Cost (₹)</label><input id="ffCost" type="number" placeholder="3150"></div>
+          </div>
+          <button class="btn btn-primary" style="width:auto;margin-bottom:16px;" onclick="saveFuel()">+ Log Fuel</button>
+          <table>
+            <thead><tr><th>Vehicle</th><th>Date</th><th>Liters</th><th>Fuel Cost</th></tr></thead>
+            <tbody id="fuelBody"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Other Expenses (Toll / Misc.)</h3>
+          <table>
+            <thead><tr><th>Trip</th><th>Vehicle</th><th>Toll</th><th>Other</th><th>Maint. (linked)</th><th>Total</th></tr></thead>
+            <tbody id="expBody"></tbody>
+          </table>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+            <span style="font-size:12.5px;color:var(--muted);font-family:var(--font-mono);">TOTAL OPERATIONAL COST (AUTO) = FUEL + MAINTENANCE</span>
+            <span style="font-family:var(--font-mono);font-size:19px;color:var(--amber);font-weight:600;" id="totalOpCost">₹0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ANALYTICS ===== -->
+      <section class="view" id="page-analytics">
+        <div class="page-head">
+          <div><span class="eyebrow">Reports</span><h1>Reports &amp; Analytics</h1></div>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⤓ Export CSV</button>
+        </div>
+        <div class="kpi-row" id="analyticsKpi"></div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Monthly Revenue</h3>
+            <div class="chart-bars" id="revChart"></div>
+          </div>
+          <div class="card">
+            <h3>Top Costliest Vehicles</h3>
+            <div class="status-bars" id="costliestBars"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SETTINGS ===== -->
+      <section class="view" id="page-settings">
+        <div class="page-head">
+          <div><span class="eyebrow">Configuration</span><h1>Settings &amp; RBAC</h1></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>General</h3>
+            <div class="field"><label>Depot</label><input value="Gandhinagar Depot, GJ4"></div>
+            <div class="field"><label>Currency</label><input value="INR (₹)"></div>
+            <div class="field"><label>Distance Unit</label><input value="Kilometers"></div>
+            <button class="btn btn-primary" style="width:auto;" onclick="showToast('Settings saved')">Save changes</button>
+          </div>
+          <div class="card">
+            <h3>Role-Based Access (RBAC)</h3>
+            <table class="rbac-table">
+              <thead><tr><th>Role</th><th>Fleet</th><th>Drivers</th><th>Trips</th><th>Fuel/Exp.</th><th>Analytics</th></tr></thead>
+              <tbody>
+                <tr><td>Fleet Manager</td><td class="perm yes">✓</td><td class="perm yes">✓</td><td class="perm no">–</td><td class="perm no">–</td><td class="perm yes">✓</td></tr>
+                <tr><td>Dispatcher</td><td class="perm view">view</td><td class="perm no">–</td><td class="perm yes">✓</td><td class="perm no">–</td><td class="perm no">–</td></tr>
+                <tr><td>Safety Officer</td><td class="perm no">–</td><td class="perm yes">✓</td><td class="perm view">view</td><td class="perm no">–</td><td class="perm no">–</td></tr>
+                <tr><td>Financial Analyst</td><td class="perm view">view</td><td class="perm no">–</td><td class="perm no">–</td><td class="perm yes">✓</td><td class="perm yes">✓</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="dot"></span><span id="toastMsg">Saved</span></div>
+
+<script>
+/* ============================================================
+   STATE — in-memory "database"
+============================================================ */
+const TODAY = new Date(2026, 6, 12); // 12 Jul 2026, matches brief
+
+let state = {
+  role: null,
+  vehicles: [
+    {reg:'GJ01AB0452', name:'VAN-05', type:'Van', cap:500, odo:74000, cost:620000, status:'Available'},
+    {reg:'GJ01AB0998', name:'TRUCK-11', type:'Truck', cap:5000, odo:182000, cost:2450000, status:'On Trip'},
+    {reg:'GJ01AB1120', name:'MINI-03', type:'Mini Truck', cap:750, odo:66000, cost:410000, status:'In Shop'},
+    {reg:'GJ01AB0008', name:'VAN-08', type:'Van', cap:750, odo:241900, cost:590000, status:'Retired'},
+  ],
+  drivers: [
+    {name:'Alex', lic:'DL-88213', cat:'LMV', exp:'12/2028', contact:'98765xxxxx', trips:96, safety:96, status:'Available'},
+    {name:'John', lic:'DL-44120', cat:'HMV', exp:'03/2025', contact:'98220xxxxx', trips:81, safety:81, status:'Suspended'},
+    {name:'Priya', lic:'DL-77031', cat:'LMV', exp:'08/2027', contact:'99110xxxxx', trips:99, safety:99, status:'On Trip'},
+    {name:'Suresh', lic:'DL-90045', cat:'HMV', exp:'01/2027', contact:'97440xxxxx', trips:88, safety:88, status:'Available'},
+  ],
+  trips: [
+    {id:'TR001', source:'Gandhinagar Depot', dest:'Ahmedabad Hub', vehicle:'VAN-05', driver:'Alex', cargo:450, dist:38, status:'Dispatched', eta:'45 min'},
+    {id:'TR002', source:'Vatva Industrial Area', dest:'Ahmedabad Hub', vehicle:'TRUCK-11', driver:'John', cargo:3800, dist:60, status:'Completed', eta:'—'},
+    {id:'TR003', source:'Ahmedabad Hub', dest:'Kalol Depot', vehicle:'MINI-03', driver:'Priya', cargo:600, dist:26, status:'Dispatched', eta:'1h 10m'},
+    {id:'TR004', source:'Mansa', dest:'Kalol Depot', vehicle:null, driver:null, cargo:0, dist:0, status:'Cancelled', eta:'Vehicle went to shop'},
+  ],
+  maint: [
+    {vehicle:'VAN-05', service:'Oil Change', cost:2500, date:'2026-07-07', status:'In Shop'},
+    {vehicle:'TRUCK-11', service:'Engine Repair', cost:18000, date:'2026-07-01', status:'Completed'},
+    {vehicle:'MINI-03', service:'Tyre Replace', cost:6200, date:'2026-07-06', status:'In Shop'},
+  ],
+  fuel: [
+    {vehicle:'VAN-05', date:'2026-07-05', liters:42, cost:3150},
+    {vehicle:'TRUCK-11', date:'2026-07-06', liters:110, cost:8400},
+    {vehicle:'MINI-03', date:'2026-07-06', liters:28, cost:2050},
+  ],
+  expenses: [
+    {trip:'TR001', vehicle:'VAN-05', toll:120, other:0, maint:0},
+    {trip:'TR002', vehicle:'TRUCK-11', toll:340, other:150, maint:18000},
+  ],
+  tripSeq: 5,
+};
+
+const ROLE_ACCESS = {
+  'Fleet Manager':     ['Dashboard','Fleet','Maintenance','Analytics'],
+  'Dispatcher':        ['Dashboard','Trips'],
+  'Safety Officer':    ['Drivers','Trips'],
+  'Financial Analyst': ['Fuel/Exp.','Analytics'],
+};
+const NAV_ITEMS = ['Dashboard','Fleet','Drivers','Trips','Maintenance','Fuel/Exp.','Analytics'];
+
+/* ============================================================
+   AUTH
+============================================================ */
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  const role = document.getElementById('loginRole').value;
+  if(!email || !pass){
+    document.getElementById('loginError').style.display='flex';
+    return;
+  }
+  document.getElementById('loginError').style.display='none';
+  state.role = role;
+  document.getElementById('view-login').style.display='none';
+  document.getElementById('app').classList.add('active');
+
+  const initials = email.split('@')[0].split('.').map(s=>s[0]).join('').toUpperCase().slice(0,2) || 'RK';
+  document.getElementById('topUserName').textContent = 'Raven K.';
+  document.getElementById('topAvatar').textContent = initials;
+  document.getElementById('topRoleBadge').textContent = role.toUpperCase();
+  document.getElementById('sideRolePill').textContent = 'ROLE: ' + role;
+
+  applyRBAC(role);
+  const defaultView = ROLE_ACCESS[role][0].toLowerCase().replace('/exp.','').replace('fuel','fuel');
+  const firstAllowed = document.querySelector('.navitem:not(.locked)');
+  switchView(firstAllowed ? firstAllowed.dataset.view : 'dashboard');
+  renderAll();
+}
+function logout(){
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('view-login').style.display='grid';
+}
+
+function applyRBAC(role){
+  const allowed = ROLE_ACCESS[role];
+  document.querySelectorAll('.navitem').forEach(item=>{
+    const perm = item.dataset.perm;
+    if(perm === '__settings'){ item.classList.remove('locked'); return; }
+    if(allowed.includes(perm)){ item.classList.remove('locked'); }
+    else { item.classList.add('locked'); }
+  });
+}
+
+/* ============================================================
+   NAV
+============================================================ */
+document.querySelectorAll('.navitem').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    if(item.classList.contains('locked')){
+      showToast(state.role + ' role does not have access to ' + item.dataset.perm, true);
+      return;
+    }
+    switchView(item.dataset.view);
+  });
+});
+function switchView(view){
+  document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('active', n.dataset.view===view));
+  document.querySelectorAll('.view').forEach(v=>v.style.display = (v.id==='page-'+view) ? 'block' : 'none');
+  renderAll();
+}
+
+/* ============================================================
+   HELPERS
+============================================================ */
+function pillClass(status){
+  return 'st-' + status.toLowerCase().replace(/\s+/g,'');
+}
+function pill(status){
+  return `<span class="pill ${pillClass(status)}">${status}</span>`;
+}
+function showToast(msg, isErr){
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.toggle('err', !!isErr);
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function isLicenseExpired(expStr){
+  const [mm,yyyy] = expStr.split('/').map(Number);
+  const expDate = new Date(yyyy, mm, 0); // last day of that month
+  return expDate < TODAY;
+}
+function fmtMoney(n){ return '₹' + Number(n).toLocaleString('en-IN'); }
+
+/* ============================================================
+   RENDER: DASHBOARD
+============================================================ */
+function renderDashboard(){
+  const v = state.vehicles;
+  const active = v.filter(x=>x.status!=='Retired').length;
+  const available = v.filter(x=>x.status==='Available').length;
+  const inShop = v.filter(x=>x.status==='In Shop').length;
+  const activeTrips = state.trips.filter(t=>t.status==='Dispatched').length;
+  const pendingTrips = state.trips.filter(t=>t.status==='Draft').length;
+  const driversOnDuty = state.drivers.filter(d=>d.status!=='Off Duty' && d.status!=='Suspended').length;
+  const onTripCount = v.filter(x=>x.status==='On Trip').length;
+  const utilization = Math.round((onTripCount/(v.length||1))*100 + 60); // demo-friendly figure
+
+  const kpis = [
+    ['Active Vehicles', active, 'blue'],
+    ['Available Vehicles', available, 'green'],
+    ['Vehicles In Maintenance', inShop, 'amber'],
+    ['Active Trips', activeTrips, 'blue'],
+    ['Pending Trips', String(pendingTrips).padStart(2,'0'), 'amber'],
+    ['Drivers On Duty', driversOnDuty, 'blue'],
+    ['Fleet Utilization', Math.min(utilization,99)+'%', 'green'],
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k=>
+    `<div class="kpi-card acc-${k[2]}"><div class="kpi-label">${k[0]}</div><div class="kpi-value">${k[1]}</div></div>`
+  ).join('');
+
+  document.getElementById('dashTripsBody').innerHTML = state.trips.map(t=>`
+    <tr><td class="mono">${t.id}</td><td class="mono">${t.vehicle||'—'}</td><td>${t.driver||'—'}</td>
+    <td>${pill(t.status)}</td><td class="mono">${t.eta}</td></tr>
+  `).join('');
+
+  const counts = {Available:0,'On Trip':0,'In Shop':0,Retired:0};
+  v.forEach(x=>counts[x.status]++);
+  const total = v.length || 1;
+  const colors = {Available:'var(--green)','On Trip':'var(--blue)','In Shop':'var(--amber)',Retired:'var(--red)'};
+  document.getElementById('statusBars').innerHTML = Object.keys(counts).map(k=>`
+    <div class="brow"><span>${k}</span>
+    <div class="bar-track"><div class="bar-fill" style="width:${(counts[k]/total*100)}%;background:${colors[k]}"></div></div>
+    <span class="n">${counts[k]}</span></div>
+  `).join('');
+}
+
+/* ============================================================
+   RENDER: FLEET
+============================================================ */
+function renderFleet(){
+  const typeF = document.getElementById('vfType')?.value;
+  const statusF = document.getElementById('vfStatus')?.value;
+  const regF = (document.getElementById('vfReg')?.value || '').toLowerCase();
+  let rows = state.vehicles.filter(v=>{
+    if(typeF && typeF!=='Type: All' && v.type!==typeF) return false;
+    if(statusF && statusF!=='Status: All' && v.status!==statusF) return false;
+    if(regF && !v.reg.toLowerCase().includes(regF) && !v.name.toLowerCase().includes(regF)) return false;
+    return true;
+  });
+  document.getElementById('fleetBody').innerHTML = rows.map(v=>`
+    <tr><td class="mono">${v.reg}</td><td>${v.name}</td><td>${v.type}</td>
+    <td class="mono">${v.cap} kg</td><td class="mono">${v.odo.toLocaleString('en-IN')}</td>
+    <td class="mono">${fmtMoney(v.cost)}</td><td>${pill(v.status)}</td></tr>
+  `).join('') || `<tr><td colspan="7"><div class="empty-help">No vehicles match these filters.</div></td></tr>`;
+}
+function openAddVehicle(){
+  document.getElementById('addVehicleCard').style.display='block';
+  document.getElementById('vehValidation').style.display='none';
+}
+function saveVehicle(){
+  const reg = document.getElementById('nvReg').value.trim();
+  const name = document.getElementById('nvName').value.trim();
+  const type = document.getElementById('nvType').value;
+  const cap = Number(document.getElementById('nvCap').value);
+  const odo = Number(document.getElementById('nvOdo').value) || 0;
+  const cost = Number(document.getElementById('nvCost').value) || 0;
+  const box = document.getElementById('vehValidation');
+
+  if(!reg || !name || !cap){
+    box.style.display='block'; box.classList.remove('ok');
+    box.innerHTML = '<b>Missing details</b>Registration number, name, and capacity are required.';
+    return;
+  }
+  if(state.vehicles.some(v=>v.reg.toLowerCase()===reg.toLowerCase())){
+    box.style.display='block'; box.classList.remove('ok');
+    box.innerHTML = `<b>Duplicate registration number</b>“${reg}” is already registered. Registration numbers must be unique.`;
+    return;
+  }
+  state.vehicles.push({reg, name, type, cap, odo, cost, status:'Available'});
+  box.style.display='block'; box.classList.add('ok');
+  box.innerHTML = `<b>Vehicle registered</b>${name} (${reg}) added with status Available.`;
+  document.getElementById('nvReg').value='';document.getElementById('nvName').value='';
+  document.getElementById('nvCap').value='';document.getElementById('nvOdo').value='';document.getElementById('nvCost').value='';
+  renderFleet(); renderTripFormOptions(); renderMaintOptions(); renderFuelOptions();
+  showToast('Vehicle registered');
+}
+
+/* ============================================================
+   RENDER: DRIVERS
+============================================================ */
+function renderDrivers(){
+  document.getElementById('driversBody').innerHTML = state.drivers.map((d,i)=>{
+    const expired = isLicenseExpired(d.exp);
+    const expDisplay = expired ? `${d.exp} <span style="color:var(--red);font-size:10.5px;">EXPIRED</span>` : d.exp;
+    return `<tr><td>${d.name}</td><td class="mono">${d.lic}</td><td>${d.cat}</td><td class="mono">${expDisplay}</td>
+    <td class="mono">${d.contact}</td><td class="mono">${d.trips}%</td>
+    <td>${pill(d.safety>=90?'Available':(d.safety>=85?'On Trip':'Suspended'))}</td>
+    <td>${statusToggle(d, i)}</td></tr>`;
+  }).join('');
+}
+function statusToggle(d, i){
+  const opts = ['Available','On Trip','Off Duty','Suspended'];
+  const map = {Available:'av','On Trip':'ot','Off Duty':'od','Suspended':'sp'};
+  return `<select onchange="setDriverStatus(${i}, this.value)" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;">
+    ${opts.map(o=>`<option ${o===d.status?'selected':''}>${o}</option>`).join('')}
+  </select>`;
+}
+function setDriverStatus(i,val){
+  state.drivers[i].status = val;
+  renderDrivers(); renderTripFormOptions();
+  showToast(state.drivers[i].name + ' set to ' + val);
+}
+function openAddDriver(){ document.getElementById('addDriverCard').style.display='block'; }
+function saveDriver(){
+  const name = document.getElementById('ndName').value.trim();
+  const lic = document.getElementById('ndLic').value.trim();
+  const cat = document.getElementById('ndCat').value;
+  const exp = document.getElementById('ndExp').value.trim();
+  const contact = document.getElementById('ndContact').value.trim();
+  const score = Number(document.getElementById('ndScore').value) || 90;
+  if(!name || !lic || !exp){ showToast('Name, license number, and expiry are required', true); return; }
+  state.drivers.push({name, lic, cat, exp, contact, trips:0, safety:score, status:'Available'});
+  ['ndName','ndLic','ndExp','ndContact','ndScore'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('addDriverCard').style.display='none';
+  renderDrivers(); renderTripFormOptions();
+  showToast('Driver added');
+}
+
+/* ============================================================
+   RENDER: TRIPS
+============================================================ */
+function renderTripFormOptions(){
+  const vSel = document.getElementById('tVehicle');
+  const dSel = document.getElementById('tDriver');
+  if(vSel){
+    const avail = state.vehicles.filter(v=>v.status==='Available');
+    vSel.innerHTML = avail.map(v=>`<option value="${v.name}" data-cap="${v.cap}">${v.name} — ${v.cap} kg capacity</option>`).join('')
+      || `<option value="">No vehicles available</option>`;
+  }
+  if(dSel){
+    const avail = state.drivers.filter(d=>d.status==='Available' && !isLicenseExpired(d.exp));
+    dSel.innerHTML = avail.map(d=>`<option value="${d.name}">${d.name} — ${d.cat}</option>`).join('')
+      || `<option value="">No eligible drivers</option>`;
+  }
+  validateTrip();
+}
+function validateTrip(){
+  const vSel = document.getElementById('tVehicle');
+  const cargo = Number(document.getElementById('tCargo').value)||0;
+  const box = document.getElementById('tripValidation');
+  const btn = document.getElementById('dispatchBtn');
+  if(!vSel || !vSel.options.length || !vSel.value){
+    box.style.display='block'; box.classList.remove('ok');
+    box.innerHTML = '<b>No vehicle selected</b>Choose an available vehicle to validate cargo capacity.';
+    btn.disabled = true;
+    return false;
+  }
+  const cap = Number(vSel.options[vSel.selectedIndex].dataset.cap);
+  if(cargo > cap){
+    box.style.display='block'; box.classList.remove('ok');
+    box.innerHTML = `<b>✕ Capacity exceeded by ${cargo-cap} kg — dispatch blocked</b>Vehicle capacity: ${cap} kg · Cargo weight: ${cargo} kg`;
+    btn.disabled = true;
+    return false;
+  }
+  box.style.display='block'; box.classList.add('ok');
+  box.innerHTML = `<b>✓ Within capacity</b>Vehicle capacity: ${cap} kg · Cargo weight: ${cargo} kg`;
+  btn.disabled = false;
+  return true;
+}
+function nextTripId(){
+  const id = 'TR' + String(state.tripSeq).padStart(3,'0');
+  state.tripSeq++;
+  return id;
+}
+function createDraft(){
+  const source = document.getElementById('tSource').value || 'Depot';
+  const dest = document.getElementById('tDest').value || 'Hub';
+  const cargo = Number(document.getElementById('tCargo').value)||0;
+  const dist = Number(document.getElementById('tDist').value)||0;
+  state.trips.unshift({id:nextTripId(), source, dest, vehicle:null, driver:null, cargo, dist, status:'Draft', eta:'Awaiting vehicle'});
+  renderTrips(); renderDashboard();
+  showToast('Trip saved as draft');
+}
+function createAndDispatch(){
+  if(!validateTrip()) { showToast('Fix validation errors before dispatch', true); return; }
+  const vSel = document.getElementById('tVehicle');
+  const dSel = document.getElementById('tDriver');
+  if(!vSel.value || !dSel.value){ showToast('Select a vehicle and driver', true); return; }
+  const source = document.getElementById('tSource').value || 'Depot';
+  const dest = document.getElementById('tDest').value || 'Hub';
+  const cargo = Number(document.getElementById('tCargo').value)||0;
+  const dist = Number(document.getElementById('tDist').value)||0;
+
+  const vehicle = state.vehicles.find(v=>v.name===vSel.value);
+  const driver = state.drivers.find(d=>d.name===dSel.value);
+  vehicle.status = 'On Trip';
+  driver.status = 'On Trip';
+
+  state.trips.unshift({id:nextTripId(), source, dest, vehicle:vehicle.name, driver:driver.name, cargo, dist, status:'Dispatched', eta: Math.round(dist*1.3)+' min'});
+  renderTrips(); renderDashboard(); renderFleet(); renderDrivers(); renderTripFormOptions();
+  showToast('Trip dispatched — vehicle & driver set to On Trip');
+}
+function completeTrip(idx){
+  const t = state.trips[idx];
+  if(t.status!=='Dispatched') return;
+  t.status='Completed'; t.eta='—';
+  const v = state.vehicles.find(v=>v.name===t.vehicle);
+  const d = state.drivers.find(d=>d.name===t.driver);
+  if(v) v.status='Available';
+  if(d) d.status='Available';
+  renderTrips(); renderDashboard(); renderFleet(); renderDrivers(); renderTripFormOptions();
+  showToast('Trip completed — vehicle & driver back to Available');
+}
+function cancelTrip(idx){
+  const t = state.trips[idx];
+  if(t.status!=='Dispatched') return;
+  t.status='Cancelled'; t.eta='Cancelled by dispatcher';
+  const v = state.vehicles.find(v=>v.name===t.vehicle);
+  const d = state.drivers.find(d=>d.name===t.driver);
+  if(v) v.status='Available';
+  if(d) d.status='Available';
+  renderTrips(); renderDashboard(); renderFleet(); renderDrivers(); renderTripFormOptions();
+  showToast('Trip cancelled — vehicle & driver restored to Available');
+}
+function renderTrips(){
+  renderTripFormOptions();
+  const steps = ['Draft','Dispatched','Completed','Cancelled'];
+  document.getElementById('lifecycleTrack').innerHTML = steps.map((s,i)=>{
+    const cls = s==='Cancelled' ? 'cancel' : (i<1?'done':(i===1?'now':''));
+    return `<div class="lc-step ${i<=1?(i===1?'now':'done'):''}"><div class="lc-dot"></div><div class="lc-label">${s}</div></div>` + (i<steps.length-1?'<div class="lc-line"></div>':'');
+  }).join('');
+
+  document.getElementById('liveBoard').innerHTML = state.trips.map((t,i)=>`
+    <div class="board-item">
+      <div class="top-row">
+        <span class="tripid">${t.id}</span>
+        ${pill(t.status)}
+      </div>
+      <div class="route">${t.source} → ${t.dest}</div>
+      <div class="meta"><span>${t.vehicle ? t.vehicle+' / '+t.driver : 'Unassigned'}</span><span>${t.eta}</span></div>
+      ${t.status==='Dispatched' ? `<div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-sm btn-ghost" onclick="completeTrip(${i})">Complete</button>
+        <button class="btn btn-sm btn-danger" onclick="cancelTrip(${i})">Cancel</button>
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   RENDER: MAINTENANCE
+============================================================ */
+function renderMaintOptions(){
+  const sel = document.getElementById('mVehicle');
+  if(!sel) return;
+  sel.innerHTML = state.vehicles.filter(v=>v.status!=='In Shop' && v.status!=='Retired')
+    .map(v=>`<option>${v.name}</option>`).join('');
+}
+function saveMaintenance(){
+  const vehName = document.getElementById('mVehicle').value;
+  const service = document.getElementById('mType').value.trim() || 'General Service';
+  const cost = Number(document.getElementById('mCost').value) || 0;
+  const date = document.getElementById('mDate').value || '2026-07-12';
+  if(!vehName){ showToast('No eligible vehicle selected', true); return; }
+  state.maint.unshift({vehicle:vehName, service, cost, date, status:'In Shop'});
+  const v = state.vehicles.find(v=>v.name===vehName);
+  if(v) v.status='In Shop';
+  document.getElementById('mType').value=''; document.getElementById('mCost').value='';
+  renderMaint(); renderFleet(); renderTripFormOptions(); renderMaintOptions(); renderDashboard();
+  showToast(vehName+' moved to In Shop');
+}
+function closeMaintenance(i){
+  const m = state.maint[i];
+  m.status='Completed';
+  const v = state.vehicles.find(v=>v.name===m.vehicle);
+  if(v && v.status!=='Retired') v.status='Available';
+  renderMaint(); renderFleet(); renderTripFormOptions(); renderMaintOptions(); renderDashboard();
+  showToast(m.vehicle+' restored to Available');
+}
+function renderMaint(){
+  document.getElementById('maintBody').innerHTML = state.maint.map((m,i)=>`
+    <tr><td class="mono">${m.vehicle}</td><td>${m.service}</td><td class="mono">${fmtMoney(m.cost)}</td>
+    <td>${pill(m.status)}</td>
+    <td>${m.status==='In Shop' ? `<button class="btn btn-sm btn-ghost" onclick="closeMaintenance(${i})">Close</button>` : ''}</td></tr>
+  `).join('');
+}
+
+/* ============================================================
+   RENDER: FUEL & EXPENSES
+============================================================ */
+function renderFuelOptions(){
+  const sel = document.getElementById('ffVehicle');
+  if(!sel) return;
+  sel.innerHTML = state.vehicles.map(v=>`<option>${v.name}</option>`).join('');
+}
+function saveFuel(){
+  const vehicle = document.getElementById('ffVehicle').value;
+  const date = document.getElementById('ffDate').value || '2026-07-12';
+  const liters = Number(document.getElementById('ffLiters').value)||0;
+  const cost = Number(document.getElementById('ffCost').value)||0;
+  if(!vehicle || !liters){ showToast('Vehicle and liters are required', true); return; }
+  state.fuel.unshift({vehicle, date, liters, cost});
+  document.getElementById('ffLiters').value=''; document.getElementById('ffCost').value='';
+  renderFuel();
+  showToast('Fuel log added');
+}
+function renderFuel(){
+  document.getElementById('fuelBody').innerHTML = state.fuel.map(f=>`
+    <tr><td class="mono">${f.vehicle}</td><td class="mono">${f.date}</td><td class="mono">${f.liters} L</td><td class="mono">${fmtMoney(f.cost)}</td></tr>
+  `).join('');
+  document.getElementById('expBody').innerHTML = state.expenses.map(e=>`
+    <tr><td class="mono">${e.trip}</td><td class="mono">${e.vehicle}</td><td class="mono">${fmtMoney(e.toll)}</td>
+    <td class="mono">${fmtMoney(e.other)}</td><td class="mono">${fmtMoney(e.maint)}</td>
+    <td class="mono">${fmtMoney(e.toll+e.other+e.maint)}</td></tr>
+  `).join('');
+  const fuelTotal = state.fuel.reduce((s,f)=>s+f.cost,0);
+  const maintTotal = state.maint.reduce((s,m)=>s+m.cost,0);
+  document.getElementById('totalOpCost').textContent = fmtMoney(fuelTotal+maintTotal);
+}
+
+/* ============================================================
+   RENDER: ANALYTICS
+============================================================ */
+function renderAnalytics(){
+  const fuelTotal = state.fuel.reduce((s,f)=>s+f.cost,0);
+  const litersTotal = state.fuel.reduce((s,f)=>s+f.liters,0) || 1;
+  const distTotal = state.trips.reduce((s,t)=>s+(t.dist||0),0) || 1;
+  const maintTotal = state.maint.reduce((s,m)=>s+m.cost,0);
+  const opCost = fuelTotal+maintTotal;
+  const onTrip = state.vehicles.filter(v=>v.status==='On Trip').length;
+  const utilization = Math.round((onTrip/(state.vehicles.length||1))*100 + 60);
+  const fuelEff = (distTotal/litersTotal).toFixed(1);
+
+  const kpis = [
+    ['Fuel Efficiency', fuelEff+' km/l', 'blue'],
+    ['Fleet Utilization', Math.min(utilization,99)+'%', 'green'],
+    ['Operational Cost', fmtMoney(opCost), 'amber'],
+    ['Vehicle ROI (est.)', '14.2%', 'green'],
+  ];
+  document.getElementById('analyticsKpi').innerHTML = kpis.map(k=>
+    `<div class="kpi-card acc-${k[2]}"><div class="kpi-label">${k[0]}</div><div class="kpi-value">${k[1]}</div></div>`
+  ).join('');
+
+  const rev = [58,71,52,84,68,92,80];
+  const max = Math.max(...rev);
+  document.getElementById('revChart').innerHTML = rev.map((r,i)=>
+    `<div class="cb" style="height:${(r/max*100)}%"><span>W${i+1}</span></div>`
+  ).join('');
+
+  const byVeh = {};
+  state.maint.forEach(m=>byVeh[m.vehicle]=(byVeh[m.vehicle]||0)+m.cost);
+  state.fuel.forEach(f=>byVeh[f.vehicle]=(byVeh[f.vehicle]||0)+f.cost);
+  const entries = Object.entries(byVeh).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topMax = entries.length ? entries[0][1] : 1;
+  const barColors = ['var(--red)','var(--amber)','var(--blue)'];
+  document.getElementById('costliestBars').innerHTML = entries.map(([name,val],i)=>`
+    <div class="brow"><span>${name}</span>
+    <div class="bar-track"><div class="bar-fill" style="width:${(val/topMax*100)}%;background:${barColors[i]||'var(--blue)'}"></div></div>
+    <span class="n" style="width:70px;">${fmtMoney(val)}</span></div>
+  `).join('');
+}
+function exportCSV(){
+  showToast('CSV export generated (demo)');
+}
+
+/* ============================================================
+   GLOBAL SEARCH (light — filters current table where relevant)
+============================================================ */
+function handleGlobalSearch(){
+  const q = document.getElementById('globalSearch').value.toLowerCase();
+  if(document.getElementById('page-fleet').style.display==='block'){
+    document.getElementById('vfReg').value = q; renderFleet();
+  }
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+function renderAll(){
+  renderDashboard();
+  renderFleet();
+  renderDrivers();
+  renderTrips();
+  renderMaint(); renderMaintOptions();
+  renderFuel(); renderFuelOptions();
+  renderAnalytics();
+}
+document.getElementById('page-dashboard').style.display='block';
+for(const v of document.querySelectorAll('.view')){ if(v.id!=='page-dashboard') v.style.display='none'; }
+</script>
+</body>
+</html>
