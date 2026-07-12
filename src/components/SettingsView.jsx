@@ -9,17 +9,33 @@ function SettingsView({
   setSettingsDistance,
   saveSettings,
   rbacAccess,
-  rbacRoles
+  rbacRoles,
+  onRbacChange
 }) {
   const modules = ['Fleet', 'Drivers', 'Trips', 'Fuel/Exp.', 'Analytics'];
 
   const renderPermission = (role, module) => {
     const allowed = rbacAccess?.[role] || [];
-    if (allowed.includes(module)) return <td className="perm yes">✓</td>;
-    if ((module === 'Fleet' || module === 'Trips') && role === 'Dispatcher') return <td className="perm view">view</td>;
-    if (module === 'Trips' && role === 'Safety Officer') return <td className="perm view">view</td>;
-    if (module === 'Fleet' && role === 'Financial Analyst') return <td className="perm view">view</td>;
-    return <td className="perm no">–</td>;
+    let currentVal = 'none';
+    if (allowed.includes(module)) {
+      currentVal = 'full';
+    } else if (allowed.includes(`${module}:view`)) {
+      currentVal = 'view';
+    }
+
+    return (
+      <td>
+        <select
+          value={currentVal}
+          onChange={(e) => onRbacChange(role, module, e.target.value)}
+          className={`rbac-select rbac-select-${currentVal}`}
+        >
+          <option value="full">Full</option>
+          <option value="view">View</option>
+          <option value="none">None</option>
+        </select>
+      </td>
+    );
   };
 
   return (

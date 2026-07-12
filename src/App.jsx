@@ -19,6 +19,7 @@ import MaintenanceView from './components/MaintenanceView';
 import FuelView from './components/FuelView';
 import AnalyticsView from './components/AnalyticsView';
 import SettingsView from './components/SettingsView';
+import SkeletonLoader from './components/SkeletonLoader';
 
 const ROLE_ACCESS = {
   'Fleet Manager': ['Dashboard', 'Fleet', 'Maintenance', 'Analytics'],
@@ -452,12 +453,35 @@ function App() {
     triggerToast('Signed out successfully');
   };
 
-  const checkAccess = (perm) => {
+  const checkAccess = (perm, type = 'any') => {
     if (!role) return false;
     if (perm === '__settings') {
       return role === 'Fleet Manager';
     }
-    return rbacAccess[role]?.includes(perm);
+    const userPerms = rbacAccess[role] || [];
+    if (type === 'write') {
+      return userPerms.includes(perm);
+    }
+    return userPerms.includes(perm) || userPerms.includes(`${perm}:view`);
+  };
+
+  const handleRbacChange = (targetRole, module, accessType) => {
+    setRbacAccess(prev => {
+      const updated = { ...prev };
+      const rolePerms = updated[targetRole] ? [...updated[targetRole]] : [];
+      
+      // Clean existing permissions for this module
+      const cleanedPerms = rolePerms.filter(p => p !== module && p !== `${module}:view`);
+      
+      if (accessType === 'full') {
+        cleanedPerms.push(module);
+      } else if (accessType === 'view') {
+        cleanedPerms.push(`${module}:view`);
+      }
+      
+      updated[targetRole] = cleanedPerms;
+      return updated;
+    });
   };
 
   const handleNavClick = (item) => {
@@ -727,7 +751,12 @@ function App() {
   const saveSettings = async () => {
     try {
       setIsDataLoading(true);
-      await api.put('/settings', { depot: settingsDepot, currency: settingsCurrency, distanceUnit: settingsDistance });
+      await api.put('/settings', {
+        depot: settingsDepot,
+        currency: settingsCurrency,
+        distanceUnit: settingsDistance,
+        rbacAccess: rbacAccess
+      });
       triggerToast('Settings saved successfully');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Failed to save settings', true);
@@ -900,190 +929,194 @@ function App() {
         />
 
         <div className="content">
-          {activeView === 'dashboard' && checkAccess('Dashboard') && (
-            <DashboardView
-              vehicles={vehicles}
-              trips={trips}
-              fVehType={fVehType}
-              setFVehType={setFVehType}
-              fStatus={fStatus}
-              setFStatus={setFStatus}
-              fRegion={fRegion}
-              setFRegion={setFRegion}
-              regionOptions={regionOptions}
-              activeVehCount={activeVehCount}
-              availVehCount={availVehCount}
-              inShopVehCount={inShopVehCount}
-              activeTripsCount={activeTripsCount}
-              pendingTripsCount={pendingTripsCount}
-              driversOnDuty={driversOnDuty}
-              fleetUtilization={fleetUtilization}
-              getPill={getPill}
-            />
-          )}
+          {isDataLoading && vehicles.length === 0 ? (
+            <SkeletonLoader view={activeView} />
+          ) : (
+            <>
+              {activeView === 'dashboard' && checkAccess('Dashboard') && (
+                <DashboardView
+                  vehicles={vehicles}
+                  trips={trips}
+                  fVehType={fVehType}
+                  setFVehType={setFVehType}
+                  fStatus={fStatus}
+                  setFStatus={setFStatus}
+                  fRegion={fRegion}
+                  setFRegion={setFRegion}
+                  regionOptions={regionOptions}
+                  activeVehCount={activeVehCount}
+                  availVehCount={availVehCount}
+                  inShopVehCount={inShopVehCount}
+                  activeTripsCount={activeTripsCount}
+                  pendingTripsCount={pendingTripsCount}
+                  driversOnDuty={driversOnDuty}
+                  fleetUtilization={fleetUtilization}
+                  getPill={getPill}
+                />
+              )}
 
-          {activeView === 'fleet' && checkAccess('Fleet') && (
-            <FleetView
-              vehicles={vehicles}
-              showAddVehicle={showAddVehicle}
-              setShowAddVehicle={setShowAddVehicle}
-              nvReg={nvReg}
-              setNvReg={setNvReg}
-              nvName={nvName}
-              setNvName={setNvName}
-              nvType={nvType}
-              setNvType={setNvType}
-              nvCap={nvCap}
-              setNvCap={setNvCap}
-              nvOdo={nvOdo}
-              setNvOdo={setNvOdo}
-              nvCost={nvCost}
-              setNvCost={setNvCost}
-              vfType={vfType}
-              setVfType={setVfType}
-              vfStatus={vfStatus}
-              setVfStatus={setVfStatus}
-              vfReg={vfReg}
-              setVfReg={setVfReg}
-              vehValidation={vehValidation}
-              setVehValidation={setVehValidation}
-              saveVehicle={saveVehicle}
-              fmtMoney={fmtMoney}
-              getPill={getPill}
-            />
-          )}
+              {activeView === 'fleet' && checkAccess('Fleet') && (
+                <FleetView
+                  vehicles={vehicles}
+                  showAddVehicle={showAddVehicle}
+                  setShowAddVehicle={setShowAddVehicle}
+                  nvReg={nvReg}
+                  setNvReg={setNvReg}
+                  nvName={nvName}
+                  setNvName={setNvName}
+                  nvType={nvType}
+                  setNvType={setNvType}
+                  nvCap={nvCap}
+                  setNvCap={setNvCap}
+                  nvOdo={nvOdo}
+                  setNvOdo={setNvOdo}
+                  nvCost={nvCost}
+                  setNvCost={setNvCost}
+                  vfType={vfType}
+                  setVfType={setVfType}
+                  vfStatus={vfStatus}
+                  setVfStatus={setVfStatus}
+                  vfReg={vfReg}
+                  setVfReg={setVfReg}
+                  vehValidation={vehValidation}
+                  setVehValidation={setVehValidation}
+                  saveVehicle={saveVehicle}
+                  fmtMoney={fmtMoney}
+                  getPill={getPill}
+                  canEdit={checkAccess('Fleet', 'write')}
+                />
+              )}
 
-          {activeView === 'drivers' && checkAccess('Drivers') && (
-            <DriversView
-              drivers={drivers}
-              showAddDriver={showAddDriver}
-              setShowAddDriver={setShowAddDriver}
-              ndName={ndName}
-              setNdName={setNdName}
-              ndLic={ndLic}
-              setNdLic={setNdLic}
-              ndCat={ndCat}
-              setNdCat={setNdCat}
-              ndExp={ndExp}
-              setNdExp={setNdExp}
-              ndContact={ndContact}
-              setNdContact={setNdContact}
-              ndScore={ndScore}
-              setNdScore={setNdScore}
-              saveDriver={saveDriver}
-              setDriverStatus={setDriverStatus}
-              isLicenseExpired={isLicenseExpired}
-              getPill={getPill}
-            />
-          )}
+              {activeView === 'drivers' && checkAccess('Drivers') && (
+                <DriversView
+                  drivers={drivers}
+                  showAddDriver={showAddDriver}
+                  setShowAddDriver={setShowAddDriver}
+                  ndName={ndName}
+                  setNdName={setNdName}
+                  ndLic={ndLic}
+                  setNdLic={setNdLic}
+                  ndCat={ndCat}
+                  setNdCat={setNdCat}
+                  ndExp={ndExp}
+                  setNdExp={setNdExp}
+                  ndContact={ndContact}
+                  setNdContact={setNdContact}
+                  ndScore={ndScore}
+                  setNdScore={setNdScore}
+                  saveDriver={saveDriver}
+                  setDriverStatus={setDriverStatus}
+                  isLicenseExpired={isLicenseExpired}
+                  getPill={getPill}
+                  canEdit={checkAccess('Drivers', 'write')}
+                />
+              )}
 
-          {activeView === 'trips' && checkAccess('Trips') && (
-            <TripsView
-              vehicles={vehicles}
-              drivers={drivers}
-              trips={trips}
-              tSource={tSource}
-              setTSource={setTSource}
-              tDest={tDest}
-              setTDest={setTDest}
-              tVehicle={tVehicle}
-              setTVehicle={setTVehicle}
-              tDriver={tDriver}
-              setTDriver={setTDriver}
-              tCargo={tCargo}
-              setTCargo={setTCargo}
-              tDist={tDist}
-              setTDist={setTDist}
-              tripValidation={tripValidation}
-              createAndDispatch={createAndDispatch}
-              createDraft={createDraft}
-              completeTrip={completeTrip}
-              cancelTrip={cancelTrip}
-              isLicenseExpired={isLicenseExpired}
-              getPill={getPill}
-            />
-          )}
+              {activeView === 'trips' && checkAccess('Trips') && (
+                <TripsView
+                  vehicles={vehicles}
+                  drivers={drivers}
+                  trips={trips}
+                  tSource={tSource}
+                  setTSource={setTSource}
+                  tDest={tDest}
+                  setTDest={setTDest}
+                  tVehicle={tVehicle}
+                  setTVehicle={setTVehicle}
+                  tDriver={tDriver}
+                  setTDriver={setTDriver}
+                  tCargo={tCargo}
+                  setTCargo={setTCargo}
+                  tDist={tDist}
+                  setTDist={setTDist}
+                  tripValidation={tripValidation}
+                  createAndDispatch={createAndDispatch}
+                  createDraft={createDraft}
+                  completeTrip={completeTrip}
+                  cancelTrip={cancelTrip}
+                  isLicenseExpired={isLicenseExpired}
+                  getPill={getPill}
+                  canEdit={checkAccess('Trips', 'write')}
+                />
+              )}
 
-          {activeView === 'access-denied' && (
-            <AccessDenied role={role} onReturn={() => setActiveView('dashboard')} />
-          )}
+              {activeView === 'access-denied' && (
+                <AccessDenied role={role} onReturn={() => setActiveView('dashboard')} />
+              )}
 
-          {activeView === 'maintenance' && checkAccess('Maintenance') && (
-            <MaintenanceView
-              vehicles={vehicles}
-              maint={maint}
-              mVehicle={mVehicle}
-              setMVehicle={setMVehicle}
-              mType={mType}
-              setMType={setMType}
-              mCost={mCost}
-              setMCost={setMCost}
-              mDate={mDate}
-              setMDate={setMDate}
-              saveMaintenance={saveMaintenance}
-              closeMaintenance={closeMaintenance}
-              fmtMoney={fmtMoney}
-              getPill={getPill}
-            />
-          )}
+              {activeView === 'maintenance' && checkAccess('Maintenance') && (
+                <MaintenanceView
+                  vehicles={vehicles}
+                  maint={maint}
+                  mVehicle={mVehicle}
+                  setMVehicle={setMVehicle}
+                  mType={mType}
+                  setMType={setMType}
+                  mCost={mCost}
+                  setMCost={setMCost}
+                  mDate={mDate}
+                  setMDate={setMDate}
+                  saveMaintenance={saveMaintenance}
+                  closeMaintenance={closeMaintenance}
+                  fmtMoney={fmtMoney}
+                  getPill={getPill}
+                  canEdit={checkAccess('Maintenance', 'write')}
+                />
+              )}
 
-          {activeView === 'fuel' && checkAccess('Fuel/Exp.') && (
-            <FuelView
-              vehicles={vehicles}
-              fuel={fuel}
-              expenses={expenses}
-              maint={maint}
-              ffVehicle={ffVehicle}
-              setFfVehicle={setFfVehicle}
-              ffDate={ffDate}
-              setFfDate={setFfDate}
-              ffLiters={ffLiters}
-              setFfLiters={setFfLiters}
-              ffCost={ffCost}
-              setFfCost={setFfCost}
-              saveFuel={saveFuel}
-              fmtMoney={fmtMoney}
-            />
-          )}
+              {activeView === 'fuel' && checkAccess('Fuel/Exp.') && (
+                <FuelView
+                  vehicles={vehicles}
+                  fuel={fuel}
+                  expenses={expenses}
+                  maint={maint}
+                  ffVehicle={ffVehicle}
+                  setFfVehicle={setFfVehicle}
+                  ffDate={ffDate}
+                  setFfDate={setFfDate}
+                  ffLiters={ffLiters}
+                  setFfLiters={setFfLiters}
+                  ffCost={ffCost}
+                  setFfCost={setFfCost}
+                  saveFuel={saveFuel}
+                  fmtMoney={fmtMoney}
+                  canEdit={checkAccess('Fuel/Exp.', 'write')}
+                />
+              )}
 
-          {activeView === 'analytics' && checkAccess('Analytics') && (
-            <AnalyticsView
-              trips={trips}
-              fuel={fuel}
-              maint={maint}
-              fleetUtilization={fleetUtilization}
-              exportCSV={exportCSV}
-              fmtMoney={fmtMoney}
-              vehicleRoiPct={vehicleRoiPct}
-              monthlyRevenueSeries={monthlyRevenueSeries}
-              costliestVehicles={costliestVehicles}
-            />
-          )}
+              {activeView === 'analytics' && checkAccess('Analytics') && (
+                <AnalyticsView
+                  trips={trips}
+                  fuel={fuel}
+                  maint={maint}
+                  fleetUtilization={fleetUtilization}
+                  exportCSV={exportCSV}
+                  fmtMoney={fmtMoney}
+                  vehicleRoiPct={vehicleRoiPct}
+                  monthlyRevenueSeries={monthlyRevenueSeries}
+                  costliestVehicles={costliestVehicles}
+                />
+              )}
 
-          {activeView === 'settings' && checkAccess('__settings') && (
-            <SettingsView
-              settingsDepot={settingsDepot}
-              setSettingsDepot={setSettingsDepot}
-              settingsCurrency={settingsCurrency}
-              setSettingsCurrency={setSettingsCurrency}
-              settingsDistance={settingsDistance}
-              setSettingsDistance={setSettingsDistance}
-              saveSettings={saveSettings}
-              triggerToast={saveSettings} // Trigger saveSettings API
-              rbacAccess={rbacAccess}
-              rbacRoles={rbacRoles}
-            />
+              {activeView === 'settings' && checkAccess('__settings') && (
+                <SettingsView
+                  settingsDepot={settingsDepot}
+                  setSettingsDepot={setSettingsDepot}
+                  settingsCurrency={settingsCurrency}
+                  setSettingsCurrency={setSettingsCurrency}
+                  settingsDistance={settingsDistance}
+                  setSettingsDistance={setSettingsDistance}
+                  saveSettings={saveSettings}
+                  triggerToast={saveSettings} // Trigger saveSettings API
+                  rbacAccess={rbacAccess}
+                  rbacRoles={rbacRoles}
+                  onRbacChange={handleRbacChange}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
-
-      {/* BUFFERING / LOADING OVERLAY */}
-      {isDataLoading && (
-        <div className="buffering-overlay" id="buffering-overlay">
-          <div className="buffering-spinner"></div>
-          <div className="buffering-text">Syncing operations database…</div>
-        </div>
-      )}
 
       {/* TOAST SYSTEM */}
       <div className={`toast ${toast.show ? 'show' : ''} ${toast.isErr ? 'err' : ''}`} id="toast">

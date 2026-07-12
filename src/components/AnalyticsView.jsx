@@ -11,6 +11,34 @@ function AnalyticsView({
   monthlyRevenueSeries,
   costliestVehicles
 }) {
+  // Calculations for Trip Status Distribution
+  const totalTrips = trips.length || 1;
+  const completedTrips = trips.filter(t => t.status === 'Completed').length;
+  const activeTrips = trips.filter(t => t.status === 'Dispatched' || t.status === 'On Trip').length;
+  const cancelledTrips = trips.filter(t => t.status === 'Cancelled').length;
+  const draftTrips = trips.filter(t => t.status === 'Draft' || t.status === 'Pending').length;
+
+  // Calculations for Expense Breakdown
+  const totalFuelCost = fuel.reduce((sum, f) => sum + f.cost, 0);
+  const totalMaintCost = maint.reduce((sum, m) => sum + m.cost, 0);
+  const grandTotalCost = totalFuelCost + totalMaintCost || 1;
+  const fuelPct = ((totalFuelCost / grandTotalCost) * 100).toFixed(0);
+  const maintPct = ((totalMaintCost / grandTotalCost) * 100).toFixed(0);
+
+  // Calculations for Costliest Vehicles
+  const byVeh = {};
+  maint.forEach(m => {
+    const name = m.vehicle?.name || m.vehicle || 'Unknown';
+    byVeh[name] = (byVeh[name] || 0) + m.cost;
+  });
+  fuel.forEach(f => {
+    const name = f.vehicle?.name || f.vehicle || 'Unknown';
+    byVeh[name] = (byVeh[name] || 0) + f.cost;
+  });
+  const entries = Object.entries(byVeh).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const topMax = entries.length ? entries[0][1] : 1;
+  const barColors = ['var(--red)', 'var(--amber)', 'var(--blue)'];
+
   return (
     <section className="view" id="page-analytics" style={{ display: 'block' }}>
       <div className="page-head">
@@ -18,6 +46,7 @@ function AnalyticsView({
         <button className="btn btn-ghost btn-sm" onClick={exportCSV}>⤓ Export CSV</button>
       </div>
 
+      {/* KPI ROW */}
       <div className="kpi-row">
         <div className="kpi-card acc-blue">
           <div className="kpi-label">Fuel Efficiency</div>
@@ -32,9 +61,7 @@ function AnalyticsView({
         <div className="kpi-card acc-amber">
           <div className="kpi-label">Operational Cost</div>
           <div className="kpi-value">
-            {fmtMoney(
-              fuel.reduce((sum, f) => sum + f.cost, 0) + maint.reduce((sum, m) => sum + m.cost, 0)
-            )}
+            {fmtMoney(totalFuelCost + totalMaintCost)}
           </div>
         </div>
         <div className="kpi-card acc-green">
@@ -43,7 +70,8 @@ function AnalyticsView({
         </div>
       </div>
 
-      <div className="grid-2">
+      {/* PRIMARY CHARTS GRID */}
+      <div className="grid-2" style={{ marginBottom: '18px' }}>
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <h3 style={{ margin: 0 }}>Monthly Revenue</h3>
@@ -73,45 +101,78 @@ function AnalyticsView({
                 );
               });
             })()}
-            {(monthlyRevenueSeries.length ? monthlyRevenueSeries : [{ label: 'No Data', value: 0 }]).map((point, i, arr) => {
-              const maxVal = Math.max(...arr.map((p) => p.value), 1);
-              const pct = (point.value / maxVal) * 100;
-              return (
-                <div key={i} className="cb" style={{ height: `${pct}%` }}>
-                  <span>{point.label}</span>
-                </div>
-              );
-            })}
           </div>
         </div>
 
         <div className="card">
           <h3>Top Costliest Vehicles</h3>
-          <div className="status-bars">
-            {(() => {
-              const byVeh = {};
-              maint.forEach(m => {
-                const name = m.vehicle?.name || m.vehicle || 'Unknown';
-                byVeh[name] = (byVeh[name] || 0) + m.cost;
-              });
-              fuel.forEach(f => {
-                const name = f.vehicle?.name || f.vehicle || 'Unknown';
-                byVeh[name] = (byVeh[name] || 0) + f.cost;
-              });
-              const entries = Object.entries(byVeh).sort((a, b) => b[1] - a[1]).slice(0, 3);
-              const topMax = entries.length ? entries[0][1] : 1;
-              const barColors = ['var(--red)', 'var(--amber)', 'var(--blue)'];
-
-              return entries.map(([name, value], i) => (
-                <div key={`${name}-${i}`} className="brow">
-                  <span>{name}</span>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${(value / topMax * 100)}%`, backgroundColor: barColors[i] || 'var(--blue)' }}></div>
-                  </div>
-                  <span className="n" style={{ width: '70px' }}>{fmtMoney(value)}</span>
+          <div className="status-bars" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {entries.map(([name, value], i) => (
+              <div key={`${name}-${i}`} className="brow" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '13px', width: '90px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{name}</span>
+                <div className="bar-track" style={{ flex: 1 }}>
+                  <div className="bar-fill" style={{ width: `${(value / topMax * 100)}%`, backgroundColor: barColors[i] || 'var(--blue)' }}></div>
                 </div>
-              ));
-            })()}
+                <span className="n mono" style={{ width: '70px', textAlign: 'right', fontSize: '12.5px' }}>{fmtMoney(value)}</span>
+              </div>
+            ))}
+            {entries.length === 0 && (
+              <div className="empty-help">No operational costs logged yet.</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* SECONDARY CHARTS GRID */}
+      <div className="grid-2">
+        {/* EXPENSE DISTRIBUTION */}
+        <div className="card">
+          <h3>Expense Distribution</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '10px' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '6px' }}>
+                <span style={{ color: 'var(--muted)' }}>Fuel Costs</span>
+                <span className="mono" style={{ fontWeight: 600 }}>{fmtMoney(totalFuelCost)} ({fuelPct}%)</span>
+              </div>
+              <div className="bar-track">
+                <div className="bar-fill" style={{ width: `${fuelPct}%`, backgroundColor: 'var(--amber)' }} />
+              </div>
+            </div>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '6px' }}>
+                <span style={{ color: 'var(--muted)' }}>Maintenance Services</span>
+                <span className="mono" style={{ fontWeight: 600 }}>{fmtMoney(totalMaintCost)} ({maintPct}%)</span>
+              </div>
+              <div className="bar-track">
+                <div className="bar-fill" style={{ width: `${maintPct}%`, backgroundColor: 'var(--red)' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* TRIP STATUS SUMMARY */}
+        <div className="card">
+          <h3>Trip Operations Summary</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {[
+              { label: 'Completed', count: completedTrips, color: 'var(--green)' },
+              { label: 'Active / Dispatched', count: activeTrips, color: 'var(--blue)' },
+              { label: 'Cancelled', count: cancelledTrips, color: 'var(--red)' },
+              { label: 'Draft / Pending', count: draftTrips, color: 'var(--muted)' }
+            ].map((item, idx) => {
+              const pct = ((item.count / totalTrips) * 100).toFixed(0);
+              return (
+                <div key={idx}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--muted)' }}>{item.label}</span>
+                    <span className="mono">{item.count} ({pct}%)</span>
+                  </div>
+                  <div className="bar-track" style={{ height: '6px' }}>
+                    <div className="bar-fill" style={{ width: `${pct}%`, backgroundColor: item.color }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

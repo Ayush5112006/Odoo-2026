@@ -19,7 +19,8 @@ function DriversView({
   saveDriver,
   setDriverStatus,
   isLicenseExpired,
-  getPill
+  getPill,
+  canEdit
 }) {
   return (
     <section className="view" id="page-drivers" style={{ display: 'block' }}>
@@ -28,12 +29,14 @@ function DriversView({
       </div>
       <div className="toolbar">
         <div></div>
-        <button className="btn btn-primary" style={{ width: 'auto' }} onClick={() => setShowAddDriver(!showAddDriver)}>
-          {showAddDriver ? 'Close Form' : '+ Add Driver'}
-        </button>
+        {canEdit && (
+          <button className="btn btn-primary" style={{ width: 'auto' }} onClick={() => setShowAddDriver(!showAddDriver)}>
+            {showAddDriver ? 'Close Form' : '+ Add Driver'}
+          </button>
+        )}
       </div>
 
-      {showAddDriver && (
+      {canEdit && showAddDriver && (
         <div className="card" style={{ marginBottom: '18px' }}>
           <h3>Register New Driver</h3>
           <div className="form-grid">
@@ -78,6 +81,7 @@ function DriversView({
                   <td>{getPill(d.status)}</td>
                   <td>
                     <select value={d.status}
+                            disabled={!canEdit}
                             onChange={(e) => setDriverStatus(d._id, e.target.value)}
                             style={{ background: 'var(--panel-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 8px', fontSize: '12px' }}>
                       <option>Available</option>

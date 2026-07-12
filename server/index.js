@@ -123,7 +123,11 @@ app.get('/api/settings', async (_req, res) => {
   try {
     let config = await Settings.findOne()
     if (!config) {
-      config = await Settings.create({ depot: 'Gandhinagar Depot, GJ4', currency: 'INR (₹)', distanceUnit: 'Kilometers' })
+      config = await Settings.create({ depot: 'Gandhinagar Depot, GJ4', currency: 'INR (₹)', distanceUnit: 'Kilometers', rbacAccess: ROLE_ACCESS })
+    }
+    if (!config.rbacAccess) {
+      config.rbacAccess = ROLE_ACCESS
+      await config.save()
     }
     res.json(config)
   } catch (error) {
@@ -140,6 +144,10 @@ app.put('/api/settings', requireRole(['Fleet Manager']), async (req, res) => {
       config.depot = req.body.depot || config.depot
       config.currency = req.body.currency || config.currency
       config.distanceUnit = req.body.distanceUnit || config.distanceUnit
+      if (req.body.rbacAccess) {
+        config.rbacAccess = req.body.rbacAccess
+        config.markModified('rbacAccess')
+      }
     }
 
     await config.save()
@@ -541,11 +549,16 @@ app.get('/api/meta/roles', (_req, res) => {
   res.json({ roles: ROLE_ENUM })
 })
 
-app.get('/api/meta/rbac', (_req, res) => {
-  res.json({
-    roles: ROLE_ENUM,
-    access: ROLE_ACCESS,
-  })
+app.get('/api/meta/rbac', async (_req, res) => {
+  try {
+    let config = await Settings.findOne()
+    res.json({
+      roles: ROLE_ENUM,
+      access: config?.rbacAccess || ROLE_ACCESS,
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
 })
 
 app.use((req, res) => {

@@ -22,7 +22,8 @@ function TripsView({
   completeTrip,
   cancelTrip,
   isLicenseExpired,
-  getPill
+  getPill,
+  canEdit
 }) {
   return (
     <section className="view" id="page-trips" style={{ display: 'block' }}>
@@ -41,57 +42,59 @@ function TripsView({
       </div>
 
       <div className="grid-2">
-        <div className="card">
-          <h3>Create Trip</h3>
-          <div className="form-grid">
-            <div className="field full"><label>Source</label><input placeholder="Gandhinagar Depot" value={tSource} onChange={(e) => setTSource(e.target.value)} /></div>
-            <div className="field full"><label>Destination</label><input placeholder="Ahmedabad Hub" value={tDest} onChange={(e) => setTDest(e.target.value)} /></div>
-            <div className="field">
-              <label>Vehicle (available only)</label>
-              <select value={tVehicle} onChange={(e) => setTVehicle(e.target.value)}>
-                {vehicles.filter(v => v.status === 'Available').length === 0 ? (
-                  <option value="">No vehicles available</option>
-                ) : (
-                  vehicles.filter(v => v.status === 'Available').map(v => (
-                    <option key={v._id} value={v._id}>{v.name} — {v.cap} kg capacity</option>
-                  ))
-                )}
-              </select>
+        {canEdit && (
+          <div className="card">
+            <h3>Create Trip</h3>
+            <div className="form-grid">
+              <div className="field full"><label>Source</label><input placeholder="Gandhinagar Depot" value={tSource} onChange={(e) => setTSource(e.target.value)} /></div>
+              <div className="field full"><label>Destination</label><input placeholder="Ahmedabad Hub" value={tDest} onChange={(e) => setTDest(e.target.value)} /></div>
+              <div className="field">
+                <label>Vehicle (available only)</label>
+                <select value={tVehicle} onChange={(e) => setTVehicle(e.target.value)}>
+                  {vehicles.filter(v => v.status === 'Available').length === 0 ? (
+                    <option value="">No vehicles available</option>
+                  ) : (
+                    vehicles.filter(v => v.status === 'Available').map(v => (
+                      <option key={v._id} value={v._id}>{v.name} — {v.cap} kg capacity</option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <div className="field">
+                <label>Driver (available only)</label>
+                <select value={tDriver} onChange={(e) => setTDriver(e.target.value)}>
+                  {drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.exp)).length === 0 ? (
+                    <option value="">No eligible drivers</option>
+                  ) : (
+                    drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.exp)).map(d => (
+                      <option key={d._id} value={d._id}>{d.name} — {d.cat}</option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <div className="field"><label>Cargo Weight (kg)</label><input type="number" value={tCargo} onChange={(e) => setTCargo(e.target.value)} /></div>
+              <div className="field"><label>Planned Distance (km)</label><input type="number" value={tDist} onChange={(e) => setTDist(e.target.value)} /></div>
             </div>
-            <div className="field">
-              <label>Driver (available only)</label>
-              <select value={tDriver} onChange={(e) => setTDriver(e.target.value)}>
-                {drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.exp)).length === 0 ? (
-                  <option value="">No eligible drivers</option>
-                ) : (
-                  drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.exp)).map(d => (
-                    <option key={d._id} value={d._id}>{d.name} — {d.cat}</option>
-                  ))
-                )}
-              </select>
+
+            {tripValidation.show && (
+              <div className={`validation-box show ${tripValidation.isOk ? 'ok' : ''}`}>
+                {tripValidation.msg}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
+              <button className="btn btn-primary"
+                      style={{ width: 'auto' }}
+                      disabled={!tripValidation.isOk || vehicles.filter(v => v.status === 'Available').length === 0 || drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.exp)).length === 0}
+                      onClick={createAndDispatch}>
+                Create &amp; Dispatch
+              </button>
+              <button className="btn btn-ghost" onClick={createDraft}>Save as Draft</button>
             </div>
-            <div className="field"><label>Cargo Weight (kg)</label><input type="number" value={tCargo} onChange={(e) => setTCargo(e.target.value)} /></div>
-            <div className="field"><label>Planned Distance (km)</label><input type="number" value={tDist} onChange={(e) => setTDist(e.target.value)} /></div>
           </div>
+        )}
 
-          {tripValidation.show && (
-            <div className={`validation-box show ${tripValidation.isOk ? 'ok' : ''}`}>
-              {tripValidation.msg}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
-            <button className="btn btn-primary"
-                    style={{ width: 'auto' }}
-                    disabled={!tripValidation.isOk || vehicles.filter(v => v.status === 'Available').length === 0 || drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.exp)).length === 0}
-                    onClick={createAndDispatch}>
-              Create &amp; Dispatch
-            </button>
-            <button className="btn btn-ghost" onClick={createDraft}>Save as Draft</button>
-          </div>
-        </div>
-
-        <div className="card">
+        <div className="card" style={!canEdit ? { gridColumn: 'span 2' } : {}}>
           <h3>Live Board</h3>
           <div id="liveBoard">
             {trips.map((t) => (
@@ -105,7 +108,7 @@ function TripsView({
                   <span>{t.vehicle ? `${t.vehicle.name} / ${t.driver?.name || '—'}` : 'Unassigned'}</span>
                   <span>{t.eta}</span>
                 </div>
-                {t.status === 'Dispatched' && (
+                {canEdit && t.status === 'Dispatched' && (
                   <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                     <button className="btn btn-sm btn-ghost" onClick={() => completeTrip(t._id)}>Complete</button>
                     <button className="btn btn-sm btn-danger" onClick={() => cancelTrip(t._id)}>Cancel</button>

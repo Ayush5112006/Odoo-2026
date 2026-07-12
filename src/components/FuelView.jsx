@@ -14,7 +14,8 @@ function FuelView({
   ffCost,
   setFfCost,
   saveFuel,
-  fmtMoney
+  fmtMoney,
+  canEdit
 }) {
   return (
     <section className="view" id="page-fuel" style={{ display: 'block' }}>
@@ -23,20 +24,24 @@ function FuelView({
       </div>
       <div className="card" style={{ marginBottom: '18px' }}>
         <h3>Fuel Logs</h3>
-        <div className="form-grid" style={{ marginBottom: '14px' }}>
-          <div className="field">
-            <label>Vehicle</label>
-            <select value={ffVehicle} onChange={(e) => setFfVehicle(e.target.value)}>
-              {vehicles.map(v => (
-                <option key={v._id} value={v._id}>{v.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="field"><label>Date</label><input type="date" value={ffDate} onChange={(e) => setFfDate(e.target.value)} /></div>
-          <div className="field"><label>Liters</label><input type="number" placeholder="42" value={ffLiters} onChange={(e) => setFfLiters(e.target.value)} /></div>
-          <div className="field"><label>Cost (₹)</label><input type="number" placeholder="3150" value={ffCost} onChange={(e) => setFfCost(e.target.value)} /></div>
-        </div>
-        <button className="btn btn-primary" style={{ width: 'auto', marginBottom: '16px' }} onClick={saveFuel}>+ Log Fuel</button>
+        {canEdit && (
+          <>
+            <div className="form-grid" style={{ marginBottom: '14px' }}>
+              <div className="field">
+                <label>Vehicle</label>
+                <select value={ffVehicle} onChange={(e) => setFfVehicle(e.target.value)}>
+                  {vehicles.map(v => (
+                    <option key={v._id} value={v._id}>{v.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field"><label>Date</label><input type="date" value={ffDate} onChange={(e) => setFfDate(e.target.value)} /></div>
+              <div className="field"><label>Liters</label><input type="number" placeholder="42" value={ffLiters} onChange={(e) => setFfLiters(e.target.value)} /></div>
+              <div className="field"><label>Cost (₹)</label><input type="number" placeholder="3150" value={ffCost} onChange={(e) => setFfCost(e.target.value)} /></div>
+            </div>
+            <button className="btn btn-primary" style={{ width: 'auto', marginBottom: '16px' }} onClick={saveFuel}>+ Log Fuel</button>
+          </>
+        )}
 
         <table>
           <thead>

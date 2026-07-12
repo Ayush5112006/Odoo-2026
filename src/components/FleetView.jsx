@@ -26,7 +26,8 @@ function FleetView({
   setVehValidation,
   saveVehicle,
   fmtMoney,
-  getPill
+  getPill,
+  canEdit
 }) {
   return (
     <section className="view" id="page-fleet" style={{ display: 'block' }}>
@@ -50,12 +51,14 @@ function FleetView({
           </select>
           <input type="text" placeholder="Search reg. no…" value={vfReg} onChange={(e) => setVfReg(e.target.value)} />
         </div>
-        <button className="btn btn-primary" style={{ width: 'auto' }} onClick={() => setShowAddVehicle(!showAddVehicle)}>
-          {showAddVehicle ? 'Close Form' : '+ Add Vehicle'}
-        </button>
+        {canEdit && (
+          <button className="btn btn-primary" style={{ width: 'auto' }} onClick={() => setShowAddVehicle(!showAddVehicle)}>
+            {showAddVehicle ? 'Close Form' : '+ Add Vehicle'}
+          </button>
+        )}
       </div>
 
-      {showAddVehicle && (
+      {canEdit && showAddVehicle && (
         <div className="card" style={{ marginBottom: '18px' }}>
           <h3>Register New Vehicle <span className="tag">reg. no. must be unique</span></h3>
           <div className="form-grid">
