@@ -56,20 +56,18 @@ function FuelView({
       </div>
 
       <div className="card">
-        <h3>Other Expenses (Toll / Misc.)</h3>
+        <h3>Operational Cost by Vehicle</h3>
         <table>
           <thead>
-            <tr><th>Trip</th><th>Vehicle</th><th>Toll</th><th>Other</th><th>Maint. (linked)</th><th>Total</th></tr>
+            <tr><th>Vehicle</th><th>Fuel</th><th>Maintenance</th><th>Total</th></tr>
           </thead>
           <tbody>
             {expenses.map((e, idx) => (
               <tr key={idx}>
-                <td className="mono">{e.trip}</td>
                 <td className="mono">{e.vehicle}</td>
-                <td className="mono">{fmtMoney(e.toll)}</td>
-                <td className="mono">{fmtMoney(e.other)}</td>
-                <td className="mono">{fmtMoney(e.maint)}</td>
-                <td className="mono">{fmtMoney(e.toll + e.other + e.maint)}</td>
+                <td className="mono">{fmtMoney(e.fuel)}</td>
+                <td className="mono">{fmtMoney(e.maintenance)}</td>
+                <td className="mono">{fmtMoney(e.total)}</td>
               </tr>
             ))}
           </tbody>

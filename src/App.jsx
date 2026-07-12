@@ -84,6 +84,8 @@ function App() {
   const [maint, setMaint] = useState([]);
   const [fuel, setFuel] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [rbacAccess, setRbacAccess] = useState(ROLE_ACCESS);
+  const [rbacRoles, setRbacRoles] = useState(Object.keys(ROLE_ACCESS));
 
   const [tripSeq, setTripSeq] = useState(5);
 
@@ -146,13 +148,14 @@ function App() {
     try {
       if (!auth?.token) return;
 
-      const [vRes, dRes, tRes, mRes, fRes, sRes] = await Promise.all([
+      const [vRes, dRes, tRes, mRes, fRes, sRes, rbacRes] = await Promise.all([
         api.get('/vehicles'),
         api.get('/drivers'),
         api.get('/trips'),
         api.get('/maintenance'),
         api.get('/fuel'),
-        api.get('/settings')
+        api.get('/settings'),
+        api.get('/meta/rbac')
       ]);
 
       setVehicles(vRes.data || []);
@@ -165,6 +168,10 @@ function App() {
       setSettingsDepot(sData.depot || 'Gandhinagar Depot, GJ4');
       setSettingsCurrency(sData.currency || 'INR (₹)');
       setSettingsDistance(sData.distanceUnit || 'Kilometers');
+
+      const rbacData = rbacRes.data || {};
+      setRbacAccess(rbacData.access || ROLE_ACCESS);
+      setRbacRoles(rbacData.roles || Object.keys(ROLE_ACCESS));
     } catch (err) {
       if (auth?.token) {
         console.error('Failed to communicate with MongoDB backend API:', err);
@@ -179,6 +186,22 @@ function App() {
   }, [role, auth?.token]);
 
   useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await api.get('/auth/roles');
+        const roles = response?.data?.roles;
+        if (Array.isArray(roles) && roles.length > 0) {
+          setRbacRoles(roles);
+        }
+      } catch {
+        // Keep default role fallback when metadata endpoint is unavailable.
+      }
+    };
+
+    fetchRoles();
+  }, []);
+
+  useEffect(() => {
     if (!trips.length) return;
     const maxSeq = trips.reduce((maxVal, t) => {
       const parsed = Number(String(t.id || '').replace(/^TR/, ''));
@@ -187,31 +210,46 @@ function App() {
     setTripSeq(maxSeq + 1);
   }, [trips]);
 
-  // Compute expenses table dynamically based on trip status & maintenance costs
+  // Compute expenses from backend collections only (fuel + maintenance)
   useEffect(() => {
-    if (trips.length > 0) {
-      const updatedExpenses = trips
-        .filter(t => t.status === 'Completed' || t.status === 'Dispatched')
-        .map(t => {
-          const vehId = t.vehicle?._id || t.vehicle;
-          const vehName = t.vehicle?.name || '—';
-          const vehMaint = maint
-            .filter(m => {
-              const maintVehId = m.vehicle?._id || m.vehicle;
-              return maintVehId === vehId && m.status === 'Completed';
-            })
-            .reduce((sum, m) => sum + m.cost, 0);
-          return {
-            trip: t.id,
-            vehicle: vehName,
-            toll: t.dist > 50 ? 340 : 120,
-            other: t.dist > 50 ? 150 : 0,
-            maint: vehMaint
-          };
-        });
-      setExpenses(updatedExpenses);
-    }
-  }, [trips, maint]);
+    const byVehicle = {};
+
+    vehicles.forEach((v) => {
+      byVehicle[v._id] = {
+        vehicle: v.name,
+        fuel: 0,
+        maintenance: 0,
+      };
+    });
+
+    fuel.forEach((f) => {
+      const id = f.vehicle?._id || f.vehicle;
+      if (!id) return;
+      if (!byVehicle[id]) {
+        byVehicle[id] = { vehicle: f.vehicle?.name || 'Unknown', fuel: 0, maintenance: 0 };
+      }
+      byVehicle[id].fuel += Number(f.cost || 0);
+    });
+
+    maint.forEach((m) => {
+      const id = m.vehicle?._id || m.vehicle;
+      if (!id) return;
+      if (!byVehicle[id]) {
+        byVehicle[id] = { vehicle: m.vehicle?.name || 'Unknown', fuel: 0, maintenance: 0 };
+      }
+      byVehicle[id].maintenance += Number(m.cost || 0);
+    });
+
+    const updatedExpenses = Object.values(byVehicle)
+      .filter((row) => row.fuel > 0 || row.maintenance > 0)
+      .map((row) => ({
+        ...row,
+        total: row.fuel + row.maintenance,
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    setExpenses(updatedExpenses);
+  }, [vehicles, fuel, maint]);
 
   // Sync validation when inputs change in dispatch form
   useEffect(() => {
@@ -365,7 +403,7 @@ function App() {
       setLoginError('');
       triggerToast(`Welcome back, ${data.user.name}!`);
 
-      const allowed = ROLE_ACCESS[data.user.role];
+      const allowed = rbacAccess[data.user.role] || ROLE_ACCESS[data.user.role];
       setActiveView(ROLE_VIEW_MAP[allowed?.[0]] || 'dashboard');
     } catch (error) {
       setLoginError(
@@ -395,7 +433,7 @@ function App() {
     if (perm === '__settings') {
       return role === 'Fleet Manager';
     }
-    return ROLE_ACCESS[role]?.includes(perm);
+    return rbacAccess[role]?.includes(perm);
   };
 
   const handleNavClick = (item) => {
@@ -703,6 +741,52 @@ function App() {
   const onTripCount = vehicles.filter(x => x.status === 'On Trip').length;
   const fleetUtilization = Math.round((onTripCount / (vehicles.length || 1)) * 100 + 60);
 
+  const estimateRevenue = (trip) => {
+    if (trip.status !== 'Completed') return 0;
+    const distRevenue = Number(trip.dist || 0) * 45;
+    const cargoRevenue = Number(trip.cargo || 0) * 2;
+    return distRevenue + cargoRevenue;
+  };
+
+  const totalRevenue = trips.reduce((sum, trip) => sum + estimateRevenue(trip), 0);
+  const totalOperationalCost =
+    fuel.reduce((sum, f) => sum + Number(f.cost || 0), 0) +
+    maint.reduce((sum, m) => sum + Number(m.cost || 0), 0);
+  const totalAcquisitionCost = vehicles.reduce((sum, v) => sum + Number(v.cost || 0), 0);
+  const vehicleRoiPct = totalAcquisitionCost
+    ? ((totalRevenue - totalOperationalCost) / totalAcquisitionCost) * 100
+    : 0;
+
+  const revenueByWeek = trips
+    .filter((trip) => trip.status === 'Completed')
+    .reduce((acc, trip) => {
+      const stamp = trip?._id ? new Date(parseInt(String(trip._id).slice(0, 8), 16) * 1000) : new Date();
+      const year = stamp.getUTCFullYear();
+      const weekBucket = Math.floor((stamp.getUTCDate() - 1) / 7) + 1;
+      const month = String(stamp.getUTCMonth() + 1).padStart(2, '0');
+      const key = `${year}-${month}-W${weekBucket}`;
+      acc[key] = (acc[key] || 0) + estimateRevenue(trip);
+      return acc;
+    }, {});
+
+  const monthlyRevenueSeries = Object.entries(revenueByWeek)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(-7)
+    .map(([label, value]) => ({ label, value }));
+
+  const costliestVehicles = expenses
+    .map((e) => ({ name: e.vehicle, value: e.total }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 3);
+
+  const regionOptions = Array.from(
+    new Set(
+      trips.flatMap((trip) => [trip.source, trip.dest])
+        .filter(Boolean)
+        .map((location) => String(location).split(' ')[0])
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
   // Extract avatar initials
   const getAvatarInitials = () => {
     const source = userName || loginEmail;
@@ -721,6 +805,7 @@ function App() {
         setLoginPass={setLoginPass}
         loginRole={loginRole}
         setLoginRole={setLoginRole}
+        availableRoles={rbacRoles}
         loginError={loginError}
         rememberMe={rememberMe}
         setRememberMe={setRememberMe}
@@ -762,13 +847,13 @@ function App() {
             <DashboardView
               vehicles={vehicles}
               trips={trips}
-              drivers={drivers}
               fVehType={fVehType}
               setFVehType={setFVehType}
               fStatus={fStatus}
               setFStatus={setFStatus}
               fRegion={fRegion}
               setFRegion={setFRegion}
+              regionOptions={regionOptions}
               activeVehCount={activeVehCount}
               availVehCount={availVehCount}
               inShopVehCount={inShopVehCount}
@@ -912,6 +997,9 @@ function App() {
               fleetUtilization={fleetUtilization}
               exportCSV={exportCSV}
               fmtMoney={fmtMoney}
+              vehicleRoiPct={vehicleRoiPct}
+              monthlyRevenueSeries={monthlyRevenueSeries}
+              costliestVehicles={costliestVehicles}
             />
           )}
 
@@ -924,6 +1012,8 @@ function App() {
               settingsDistance={settingsDistance}
               setSettingsDistance={setSettingsDistance}
               triggerToast={saveSettings} // Trigger saveSettings API
+              rbacAccess={rbacAccess}
+              rbacRoles={rbacRoles}
             />
           )}
         </div>

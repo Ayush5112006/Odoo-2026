@@ -23,6 +23,12 @@ app.use(cors())
 app.use(express.json())
 
 const ROLE_ENUM = ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst']
+const ROLE_ACCESS = {
+  'Fleet Manager': ['Dashboard', 'Fleet', 'Maintenance', 'Analytics'],
+  Dispatcher: ['Dashboard', 'Trips'],
+  'Safety Officer': ['Drivers', 'Trips'],
+  'Financial Analyst': ['Fuel/Exp.', 'Analytics'],
+}
 
 const isLicenseExpired = (expStr) => {
   if (!expStr || typeof expStr !== 'string') return false
@@ -533,6 +539,13 @@ app.post('/api/fuel', async (req, res) => {
 
 app.get('/api/meta/roles', (_req, res) => {
   res.json({ roles: ROLE_ENUM })
+})
+
+app.get('/api/meta/rbac', (_req, res) => {
+  res.json({
+    roles: ROLE_ENUM,
+    access: ROLE_ACCESS,
+  })
 })
 
 app.use((req, res) => {

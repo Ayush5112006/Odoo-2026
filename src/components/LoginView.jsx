@@ -7,6 +7,7 @@ function LoginView({
   setLoginPass,
   loginRole,
   setLoginRole,
+  availableRoles,
   loginError,
   rememberMe,
   setRememberMe,
@@ -95,10 +96,9 @@ function LoginView({
               <div className="field">
                 <label>Role (optional)</label>
                 <select value={loginRole} onChange={(e) => setLoginRole(e.target.value)}>
-                  <option value="Fleet Manager">Fleet Manager</option>
-                  <option value="Dispatcher">Dispatcher</option>
-                  <option value="Safety Officer">Safety Officer</option>
-                  <option value="Financial Analyst">Financial Analyst</option>
+                  {(availableRoles || []).map((role) => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
                 </select>
               </div>
             </>

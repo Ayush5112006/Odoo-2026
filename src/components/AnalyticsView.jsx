@@ -6,7 +6,10 @@ function AnalyticsView({
   maint,
   fleetUtilization,
   exportCSV,
-  fmtMoney
+  fmtMoney,
+  vehicleRoiPct,
+  monthlyRevenueSeries,
+  costliestVehicles
 }) {
   return (
     <section className="view" id="page-analytics" style={{ display: 'block' }}>
@@ -36,7 +39,7 @@ function AnalyticsView({
         </div>
         <div className="kpi-card acc-green">
           <div className="kpi-label">Vehicle ROI (est.)</div>
-          <div className="kpi-value">14.2%</div>
+          <div className="kpi-value">{vehicleRoiPct.toFixed(1)}%</div>
         </div>
       </div>
 
@@ -44,12 +47,12 @@ function AnalyticsView({
         <div className="card">
           <h3>Monthly Revenue</h3>
           <div className="chart-bars">
-            {[58, 71, 52, 84, 68, 92, 80].map((r, i) => {
-              const maxVal = Math.max(58, 71, 52, 84, 68, 92, 80);
-              const pct = (r / maxVal) * 100;
+            {(monthlyRevenueSeries.length ? monthlyRevenueSeries : [{ label: 'No Data', value: 0 }]).map((point, i, arr) => {
+              const maxVal = Math.max(...arr.map((p) => p.value), 1);
+              const pct = (point.value / maxVal) * 100;
               return (
                 <div key={i} className="cb" style={{ height: `${pct}%` }}>
-                  <span>W{i + 1}</span>
+                  <span>{point.label}</span>
                 </div>
               );
             })}
@@ -60,20 +63,17 @@ function AnalyticsView({
           <h3>Top Costliest Vehicles</h3>
           <div className="status-bars">
             {(() => {
-              const byVeh = {};
-              maint.forEach(m => byVeh[m.vehicle] = (byVeh[m.vehicle] || 0) + m.cost);
-              fuel.forEach(f => byVeh[f.vehicle] = (byVeh[f.vehicle] || 0) + f.cost);
-              const entries = Object.entries(byVeh).sort((a, b) => b[1] - a[1]).slice(0, 3);
-              const topMax = entries.length ? entries[0][1] : 1;
+              const entries = costliestVehicles;
+              const topMax = entries.length ? entries[0].value : 1;
               const barColors = ['var(--red)', 'var(--amber)', 'var(--blue)'];
 
-              return entries.map(([name, val], i) => (
-                <div key={name} className="brow">
-                  <span>{name}</span>
+              return entries.map((entry, i) => (
+                <div key={`${entry.name}-${i}`} className="brow">
+                  <span>{entry.name}</span>
                   <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${(val / topMax * 100)}%`, backgroundColor: barColors[i] || 'var(--blue)' }}></div>
+                    <div className="bar-fill" style={{ width: `${(entry.value / topMax * 100)}%`, backgroundColor: barColors[i] || 'var(--blue)' }}></div>
                   </div>
-                  <span className="n" style={{ width: '70px' }}>{fmtMoney(val)}</span>
+                  <span className="n" style={{ width: '70px' }}>{fmtMoney(entry.value)}</span>
                 </div>
               ));
             })()}
