@@ -7,7 +7,9 @@ function SettingsView({
   setSettingsCurrency,
   settingsDistance,
   setSettingsDistance,
-  saveSettings
+  saveSettings,
+  rbacAccess,
+  rbacRoles
 }) {
   const modules = ['Fleet', 'Drivers', 'Trips', 'Fuel/Exp.', 'Analytics'];
 
