@@ -53,7 +53,7 @@ function MaintenanceView({
             <tbody>
               {maint.map((m, idx) => (
                 <tr key={idx}>
-                  <td className="mono">{m.vehicle}</td>
+                  <td className="mono">{m.vehicle?.name || '—'}</td>
                   <td>{m.service}</td>
                   <td className="mono">{fmtMoney(m.cost)}</td>
                   <td>{getPill(m.status)}</td>

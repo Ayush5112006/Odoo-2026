@@ -67,8 +67,8 @@ function DashboardView({
               {trips.slice(0, 6).map(t => (
                 <tr key={t.id}>
                   <td className="mono">{t.id}</td>
-                  <td className="mono">{t.vehicle || '—'}</td>
-                  <td>{t.driver || '—'}</td>
+                  <td className="mono">{t.vehicle?.name || '—'}</td>
+                  <td>{t.driver?.name || '—'}</td>
                   <td>{getPill(t.status)}</td>
                   <td className="mono">{t.eta}</td>
                 </tr>

@@ -102,7 +102,7 @@ function TripsView({
                 </div>
                 <div className="route">{t.source} → {t.dest}</div>
                 <div className="meta">
-                  <span>{t.vehicle ? `${t.vehicle} / ${t.driver}` : 'Unassigned'}</span>
+                  <span>{t.vehicle ? `${t.vehicle.name} / ${t.driver?.name || '—'}` : 'Unassigned'}</span>
                   <span>{t.eta}</span>
                 </div>
                 {t.status === 'Dispatched' && (

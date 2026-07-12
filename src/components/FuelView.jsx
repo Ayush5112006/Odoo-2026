@@ -45,7 +45,7 @@ function FuelView({
           <tbody>
             {fuel.map((f, i) => (
               <tr key={i}>
-                <td className="mono">{f.vehicle}</td>
+                <td className="mono">{f.vehicle?.name || '—'}</td>
                 <td className="mono">{f.date}</td>
                 <td className="mono">{f.liters} L</td>
                 <td className="mono">{fmtMoney(f.cost)}</td>
