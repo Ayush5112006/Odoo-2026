@@ -764,6 +764,37 @@ a {
   align-items: start;
 }
 
+/* Keep the Live Board card pinned while scrolling the left column */
+#page-trips .grid-2 > .card:last-child {
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+#page-trips .grid-2 > .card:last-child #liveBoard {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 120px);
+  padding-right: 4px;
+}
+
+/* Thin scrollbar for Live Board */
+#liveBoard::-webkit-scrollbar {
+  width: 5px;
+}
+#liveBoard::-webkit-scrollbar-track {
+  background: transparent;
+}
+#liveBoard::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 10px;
+}
+#liveBoard::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.22);
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -1242,3 +1273,128 @@ th.mono {
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================================================
+   ACCESS DENIED — Premium 403 Page
+   ===================================================== */
+
+.access-denied-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 40px 20px;
+  animation: ad-fadeIn 0.5s ease-out;
+}
+
+@keyframes ad-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.access-denied-card {
+  background: #ffffff;
+  border: 1px solid #e8ecf1;
+  border-radius: 20px;
+  padding: 48px 44px;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Shield icon wrapper */
+.ad-icon-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.ad-shield {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+  animation: ad-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes ad-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(220, 38, 38, 0);
+  }
+}
+
+/* 403 code */
+.ad-code {
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+/* Title */
+.ad-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+}
+
+/* Gradient divider */
+.ad-divider {
+  width: 60px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #10b981, #3b82f6);
+  margin: 0 auto 20px;
+}
+
+/* Message text */
+.ad-message {
+  font-size: 15px;
+  color: #475569;
+  line-height: 1.65;
+  margin: 0 0 12px 0;
+}
+
+/* Role badge inside message */
+.ad-role-badge {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  color: #ffffff;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+/* Hint / secondary text */
+.ad-hint {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 0;
+}
