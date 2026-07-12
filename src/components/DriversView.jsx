@@ -75,7 +75,7 @@ function DriversView({
                   </td>
                   <td className="mono">{d.contact}</td>
                   <td className="mono">{d.trips}%</td>
-                  <td>{getPill(d.safety >= 90 ? 'Available' : (d.safety >= 85 ? 'On Trip' : 'Suspended'))}</td>
+                  <td>{getPill(d.status)}</td>
                   <td>
                     <select value={d.status}
                             onChange={(e) => setDriverStatus(d._id, e.target.value)}
