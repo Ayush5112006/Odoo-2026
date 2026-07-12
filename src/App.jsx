@@ -144,37 +144,48 @@ function App() {
   // --- API DATA FETCHING ---
   const fetchAllData = async () => {
     try {
-      const vRes = await fetch(`${API_BASE}/vehicles`);
-      if (vRes.ok) setVehicles(await vRes.json());
+      if (!auth?.token) return;
 
-      const dRes = await fetch(`${API_BASE}/drivers`);
-      if (dRes.ok) setDrivers(await dRes.json());
+      const [vRes, dRes, tRes, mRes, fRes, sRes] = await Promise.all([
+        api.get('/vehicles'),
+        api.get('/drivers'),
+        api.get('/trips'),
+        api.get('/maintenance'),
+        api.get('/fuel'),
+        api.get('/settings')
+      ]);
 
-      const tRes = await fetch(`${API_BASE}/trips`);
-      if (tRes.ok) setTrips(await tRes.json());
+      setVehicles(vRes.data || []);
+      setDrivers(dRes.data || []);
+      setTrips(tRes.data || []);
+      setMaint(mRes.data || []);
+      setFuel(fRes.data || []);
 
-      const mRes = await fetch(`${API_BASE}/maintenance`);
-      if (mRes.ok) setMaint(await mRes.json());
-
-      const fRes = await fetch(`${API_BASE}/fuel`);
-      if (fRes.ok) setFuel(await fRes.json());
-
-      const sRes = await fetch(`${API_BASE}/settings`);
-      if (sRes.ok) {
-        const sData = await sRes.json();
-        setSettingsDepot(sData.depot);
-        setSettingsCurrency(sData.currency);
-        setSettingsDistance(sData.distanceUnit);
-      }
+      const sData = sRes.data || {};
+      setSettingsDepot(sData.depot || 'Gandhinagar Depot, GJ4');
+      setSettingsCurrency(sData.currency || 'INR (₹)');
+      setSettingsDistance(sData.distanceUnit || 'Kilometers');
     } catch (err) {
-      console.error('Failed to communicate with MongoDB backend API:', err);
+      if (auth?.token) {
+        console.error('Failed to communicate with MongoDB backend API:', err);
+        triggerToast('Failed to fetch data from backend', true);
+      }
     }
   };
 
   // Fetch all collections on mount & whenever we successfully log in
   useEffect(() => {
     fetchAllData();
-  }, [role]);
+  }, [role, auth?.token]);
+
+  useEffect(() => {
+    if (!trips.length) return;
+    const maxSeq = trips.reduce((maxVal, t) => {
+      const parsed = Number(String(t.id || '').replace(/^TR/, ''));
+      return Number.isFinite(parsed) ? Math.max(maxVal, parsed) : maxVal;
+    }, 0);
+    setTripSeq(maxSeq + 1);
+  }, [trips]);
 
   // Compute expenses table dynamically based on trip status & maintenance costs
   useEffect(() => {
@@ -205,7 +216,7 @@ function App() {
   // Sync validation when inputs change in dispatch form
   useEffect(() => {
     if (activeView === 'trips') {
-      const selected = vehicles.find(v => v.name === tVehicle);
+      const selected = vehicles.find(v => v._id === tVehicle);
       if (!tVehicle || !selected) {
         setTripValidation({
           show: true,
@@ -234,10 +245,10 @@ function App() {
       const availableVehicles = vehicles.filter(v => v.status === 'Available');
       const availableDrivers = drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.exp));
       if (availableVehicles.length > 0 && !tVehicle) {
-        setTVehicle(availableVehicles[0].name);
+        setTVehicle(availableVehicles[0]._id);
       }
       if (availableDrivers.length > 0 && !tDriver) {
-        setTDriver(availableDrivers[0].name);
+        setTDriver(availableDrivers[0]._id);
       }
     }
   }, [activeView, vehicles, drivers]);
@@ -247,7 +258,7 @@ function App() {
     if (activeView === 'maintenance') {
       const eligible = vehicles.filter(v => v.status !== 'In Shop' && v.status !== 'Retired');
       if (eligible.length > 0 && !mVehicle) {
-        setMVehicle(eligible[0].name);
+        setMVehicle(eligible[0]._id);
       }
     }
   }, [activeView, vehicles]);
@@ -255,7 +266,7 @@ function App() {
   // Sync fuel form options
   useEffect(() => {
     if (activeView === 'fuel' && vehicles.length > 0 && !ffVehicle) {
-      setFfVehicle(vehicles[0].name);
+      setFfVehicle(vehicles[0]._id);
     }
   }, [activeView, vehicles]);
 
@@ -425,27 +436,18 @@ function App() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/vehicles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reg, name, type: nvType, cap, odo, cost, status: 'Available' })
-      });
-      if (res.ok) {
-        await fetchAllData();
-        setNvReg('');
-        setNvName('');
-        setNvCap('');
-        setNvOdo('');
-        setNvCost('');
-        setShowAddVehicle(false);
-        setVehValidation({ show: false, isOk: false, msg: '' });
-        triggerToast('Vehicle registered');
-      } else {
-        const errData = await res.json();
-        triggerToast(errData.error || 'Failed to register vehicle', true);
-      }
+      await api.post('/vehicles', { reg, name, type: nvType, cap, odo, cost, status: 'Available' });
+      await fetchAllData();
+      setNvReg('');
+      setNvName('');
+      setNvCap('');
+      setNvOdo('');
+      setNvCost('');
+      setShowAddVehicle(false);
+      setVehValidation({ show: false, isOk: false, msg: '' });
+      triggerToast('Vehicle registered');
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
@@ -463,49 +465,34 @@ function App() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/drivers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, lic, cat: ndCat, exp, contact, trips: 0, safety: score, status: 'Available' })
-      });
-      if (res.ok) {
-        await fetchAllData();
-        setNdName('');
-        setNdLic('');
-        setNdExp('');
-        setNdContact('');
-        setNdScore('');
-        setShowAddDriver(false);
-        triggerToast('Driver added');
-      } else {
-        const errData = await res.json();
-        triggerToast(errData.error || 'Failed to add driver', true);
-      }
+      await api.post('/drivers', { name, lic, cat: ndCat, exp, contact, trips: 0, safety: score, status: 'Available' });
+      await fetchAllData();
+      setNdName('');
+      setNdLic('');
+      setNdExp('');
+      setNdContact('');
+      setNdScore('');
+      setShowAddDriver(false);
+      triggerToast('Driver added');
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
-  const setDriverStatus = async (index, value) => {
+  const setDriverStatus = async (driverId, value) => {
     try {
-      const res = await fetch(`${API_BASE}/drivers/${index}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: value })
-      });
-      if (res.ok) {
-        await fetchAllData();
-        triggerToast('Driver status updated');
-      }
+      await api.put(`/drivers/${driverId}/status`, { status: value });
+      await fetchAllData();
+      triggerToast('Driver status updated');
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
   // Trips: Dispatch
   const createAndDispatch = async () => {
-    const selectedVeh = vehicles.find(v => v.name === tVehicle);
-    const selectedDrv = drivers.find(d => d.name === tDriver);
+    const selectedVeh = vehicles.find(v => v._id === tVehicle);
+    const selectedDrv = drivers.find(d => d._id === tDriver);
 
     if (!selectedVeh || !selectedDrv) {
       triggerToast('Select a vehicle and driver', true);
@@ -521,30 +508,22 @@ function App() {
     setTripSeq(tripSeq + 1);
 
     try {
-      const res = await fetch(`${API_BASE}/trips`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          source: tSource || 'Depot',
-          dest: tDest || 'Hub',
-          vehicle: selectedVeh._id, // Send normalized ObjectId
-          driver: selectedDrv._id,   // Send normalized ObjectId
-          cargo: Number(tCargo) || 0,
-          dist: Number(tDist) || 0,
-          status: 'Dispatched',
-          eta: Math.round(Number(tDist) * 1.3) + ' min'
-        })
+      await api.post('/trips', {
+        id,
+        source: tSource || 'Depot',
+        dest: tDest || 'Hub',
+        vehicle: selectedVeh._id,
+        driver: selectedDrv._id,
+        cargo: Number(tCargo) || 0,
+        dist: Number(tDist) || 0,
+        status: 'Dispatched',
+        eta: Math.round(Number(tDist) * 1.3) + ' min'
       });
-      if (res.ok) {
-        await fetchAllData();
-        triggerToast('Trip dispatched — vehicle & driver set to On Trip');
-      } else {
-        const errData = await res.json();
-        triggerToast(errData.error || 'Dispatch failed', true);
-      }
+
+      await fetchAllData();
+      triggerToast('Trip dispatched — vehicle & driver set to On Trip');
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
@@ -554,60 +533,43 @@ function App() {
     setTripSeq(tripSeq + 1);
 
     try {
-      const res = await fetch(`${API_BASE}/trips`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          source: tSource || 'Depot',
-          dest: tDest || 'Hub',
-          vehicle: null,
-          driver: null,
-          cargo: Number(tCargo) || 0,
-          dist: Number(tDist) || 0,
-          status: 'Draft',
-          eta: 'Awaiting vehicle'
-        })
+      await api.post('/trips', {
+        id,
+        source: tSource || 'Depot',
+        dest: tDest || 'Hub',
+        vehicle: null,
+        driver: null,
+        cargo: Number(tCargo) || 0,
+        dist: Number(tDist) || 0,
+        status: 'Draft',
+        eta: 'Awaiting vehicle'
       });
-      if (res.ok) {
-        await fetchAllData();
-        triggerToast('Trip saved as draft');
-      }
+
+      await fetchAllData();
+      triggerToast('Trip saved as draft');
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
   // Trips: Actions
-  const completeTrip = async (index) => {
+  const completeTrip = async (tripId) => {
     try {
-      const res = await fetch(`${API_BASE}/trips/${index}/action`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'Complete' })
-      });
-      if (res.ok) {
-        await fetchAllData();
-        triggerToast('Trip completed — vehicle & driver back to Available');
-      }
+      await api.put(`/trips/${tripId}/action`, { action: 'Complete' });
+      await fetchAllData();
+      triggerToast('Trip completed — vehicle & driver back to Available');
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
-  const cancelTrip = async (index) => {
+  const cancelTrip = async (tripId) => {
     try {
-      const res = await fetch(`${API_BASE}/trips/${index}/action`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'Cancel' })
-      });
-      if (res.ok) {
-        await fetchAllData();
-        triggerToast('Trip cancelled — vehicle & driver restored to Available');
-      }
+      await api.put(`/trips/${tripId}/action`, { action: 'Cancel' });
+      await fetchAllData();
+      triggerToast('Trip cancelled — vehicle & driver restored to Available');
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
@@ -618,40 +580,30 @@ function App() {
       return;
     }
 
-    const vehObj = vehicles.find(v => v.name === mVehicle);
+    const vehObj = vehicles.find(v => v._id === mVehicle);
     if (!vehObj) return;
 
     const service = mType.trim() || 'General Service';
     const cost = Number(mCost) || 0;
 
     try {
-      const res = await fetch(`${API_BASE}/maintenance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vehicle: vehObj._id, service, cost, date: mDate, status: 'In Shop' }) // Send normalized ObjectId
-      });
-      if (res.ok) {
-        await fetchAllData();
-        setMType('');
-        setMCost('');
-        triggerToast(`${mVehicle} moved to In Shop`);
-      }
+      await api.post('/maintenance', { vehicle: vehObj._id, service, cost, date: mDate, status: 'In Shop' });
+      await fetchAllData();
+      setMType('');
+      setMCost('');
+      triggerToast(`${vehObj.name} moved to In Shop`);
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
-  const closeMaintenance = async (index) => {
+  const closeMaintenance = async (recordId) => {
     try {
-      const res = await fetch(`${API_BASE}/maintenance/${index}/close`, {
-        method: 'PUT'
-      });
-      if (res.ok) {
-        await fetchAllData();
-        triggerToast('Maintenance closed — vehicle back to Available');
-      }
+      await api.put(`/maintenance/${recordId}/close`);
+      await fetchAllData();
+      triggerToast('Maintenance closed — vehicle back to Available');
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
@@ -662,48 +614,83 @@ function App() {
       return;
     }
 
-    const vehObj = vehicles.find(v => v.name === ffVehicle);
+    const vehObj = vehicles.find(v => v._id === ffVehicle);
     if (!vehObj) return;
 
     const liters = Number(ffLiters) || 0;
     const cost = Number(ffCost) || 0;
 
     try {
-      const res = await fetch(`${API_BASE}/fuel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vehicle: vehObj._id, date: ffDate, liters, cost }) // Send normalized ObjectId
-      });
-      if (res.ok) {
-        await fetchAllData();
-        setFfLiters('');
-        setFfCost('');
-        triggerToast('Fuel log added');
-      }
+      await api.post('/fuel', { vehicle: vehObj._id, date: ffDate, liters, cost });
+      await fetchAllData();
+      setFfLiters('');
+      setFfCost('');
+      triggerToast('Fuel log added');
     } catch (err) {
-      triggerToast('Database connection failed', true);
+      triggerToast(err?.response?.data?.error || 'Database connection failed', true);
     }
   };
 
   // Settings: Cloud Sync save
   const saveSettings = async () => {
     try {
-      const res = await fetch(`${API_BASE}/settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ depot: settingsDepot, currency: settingsCurrency, distanceUnit: settingsDistance })
-      });
-      if (res.ok) {
-        triggerToast('Settings saved successfully');
-      }
+      await api.put('/settings', { depot: settingsDepot, currency: settingsCurrency, distanceUnit: settingsDistance });
+      triggerToast('Settings saved successfully');
     } catch (err) {
-      triggerToast('Failed to save settings', true);
+      triggerToast(err?.response?.data?.error || 'Failed to save settings', true);
     }
   };
 
   // Analytics
   const exportCSV = () => {
-    triggerToast('CSV export generated (demo)');
+    const header = ['Trip ID', 'Vehicle', 'Driver', 'Status', 'Distance KM', 'Fuel Liters', 'Fuel Cost', 'Maintenance Cost'];
+
+    const rows = trips.map((trip) => {
+      const tripVehicleId = trip.vehicle?._id || trip.vehicle;
+      const fuelForVehicle = fuel
+        .filter((f) => {
+          const fuelVehicleId = f.vehicle?._id || f.vehicle;
+          return fuelVehicleId === tripVehicleId;
+        })
+        .reduce(
+          (acc, cur) => ({ liters: acc.liters + Number(cur.liters || 0), cost: acc.cost + Number(cur.cost || 0) }),
+          { liters: 0, cost: 0 }
+        );
+
+      const maintCost = maint
+        .filter((m) => {
+          const maintVehicleId = m.vehicle?._id || m.vehicle;
+          return maintVehicleId === tripVehicleId;
+        })
+        .reduce((sum, m) => sum + Number(m.cost || 0), 0);
+
+      return [
+        trip.id,
+        trip.vehicle?.name || '—',
+        trip.driver?.name || '—',
+        trip.status,
+        Number(trip.dist || 0),
+        fuelForVehicle.liters,
+        fuelForVehicle.cost,
+        maintCost
+      ];
+    });
+
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transitops-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    triggerToast('CSV exported successfully');
   };
 
   // --- DYNAMIC CALCULATIONS ---

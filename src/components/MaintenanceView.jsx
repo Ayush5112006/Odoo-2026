@@ -28,7 +28,7 @@ function MaintenanceView({
             <label>Vehicle</label>
             <select value={mVehicle} onChange={(e) => setMVehicle(e.target.value)}>
               {vehicles.filter(v => v.status !== 'In Shop' && v.status !== 'Retired').map(v => (
-                <option key={v.name} value={v.name}>{v.name}</option>
+                <option key={v._id} value={v._id}>{v.name}</option>
               ))}
               {vehicles.filter(v => v.status !== 'In Shop' && v.status !== 'Retired').length === 0 && (
                 <option value="">No eligible vehicles</option>
@@ -51,15 +51,15 @@ function MaintenanceView({
               <tr><th>Vehicle</th><th>Service</th><th>Cost</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
-              {maint.map((m, idx) => (
-                <tr key={idx}>
+              {maint.map((m) => (
+                <tr key={m._id}>
                   <td className="mono">{m.vehicle?.name || '—'}</td>
                   <td>{m.service}</td>
                   <td className="mono">{fmtMoney(m.cost)}</td>
                   <td>{getPill(m.status)}</td>
                   <td>
                     {m.status === 'In Shop' && (
-                      <button className="btn btn-sm btn-ghost" onClick={() => closeMaintenance(idx)}>Close</button>
+                      <button className="btn btn-sm btn-ghost" onClick={() => closeMaintenance(m._id)}>Close</button>
                     )}
                   </td>
                 </tr>

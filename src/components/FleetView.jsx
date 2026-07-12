@@ -57,7 +57,7 @@ function FleetView({
 
       {showAddVehicle && (
         <div className="card" style={{ marginBottom: '18px' }}>
-          <h3>Register New Vehicle <span class="tag">reg. no. must be unique</span></h3>
+          <h3>Register New Vehicle <span className="tag">reg. no. must be unique</span></h3>
           <div className="form-grid">
             <div className="field">
               <label>Registration No.</label>

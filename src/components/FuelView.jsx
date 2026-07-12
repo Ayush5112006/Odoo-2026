@@ -28,7 +28,7 @@ function FuelView({
             <label>Vehicle</label>
             <select value={ffVehicle} onChange={(e) => setFfVehicle(e.target.value)}>
               {vehicles.map(v => (
-                <option key={v.name} value={v.name}>{v.name}</option>
+                <option key={v._id} value={v._id}>{v.name}</option>
               ))}
             </select>
           </div>

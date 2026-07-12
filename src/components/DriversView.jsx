@@ -63,7 +63,7 @@ function DriversView({
             <tr><th>Driver</th><th>License No.</th><th>Category</th><th>Expiry</th><th>Contact</th><th>Trip Compl.</th><th>Safety</th><th>Status</th></tr>
           </thead>
           <tbody>
-            {drivers.map((d, i) => {
+            {drivers.map((d) => {
               const expired = isLicenseExpired(d.exp);
               return (
                 <tr key={d.lic}>
@@ -78,7 +78,7 @@ function DriversView({
                   <td>{getPill(d.safety >= 90 ? 'Available' : (d.safety >= 85 ? 'On Trip' : 'Suspended'))}</td>
                   <td>
                     <select value={d.status}
-                            onChange={(e) => setDriverStatus(i, e.target.value)}
+                            onChange={(e) => setDriverStatus(d._id, e.target.value)}
                             style={{ background: 'var(--panel-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 8px', fontSize: '12px' }}>
                       <option>Available</option>
                       <option>On Trip</option>

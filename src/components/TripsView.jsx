@@ -53,7 +53,7 @@ function TripsView({
                   <option value="">No vehicles available</option>
                 ) : (
                   vehicles.filter(v => v.status === 'Available').map(v => (
-                    <option key={v.name} value={v.name}>{v.name} — {v.cap} kg capacity</option>
+                    <option key={v._id} value={v._id}>{v.name} — {v.cap} kg capacity</option>
                   ))
                 )}
               </select>
@@ -65,7 +65,7 @@ function TripsView({
                   <option value="">No eligible drivers</option>
                 ) : (
                   drivers.filter(d => d.status === 'Available' && !isLicenseExpired(d.exp)).map(d => (
-                    <option key={d.name} value={d.name}>{d.name} — {d.cat}</option>
+                    <option key={d._id} value={d._id}>{d.name} — {d.cat}</option>
                   ))
                 )}
               </select>
@@ -94,7 +94,7 @@ function TripsView({
         <div className="card">
           <h3>Live Board</h3>
           <div id="liveBoard">
-            {trips.map((t, idx) => (
+            {trips.map((t) => (
               <div key={t.id} className="board-item">
                 <div className="top-row">
                   <span className="tripid">{t.id}</span>
@@ -107,8 +107,8 @@ function TripsView({
                 </div>
                 {t.status === 'Dispatched' && (
                   <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                    <button className="btn btn-sm btn-ghost" onClick={() => completeTrip(idx)}>Complete</button>
-                    <button className="btn btn-sm btn-danger" onClick={() => cancelTrip(idx)}>Cancel</button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => completeTrip(t._id)}>Complete</button>
+                    <button className="btn btn-sm btn-danger" onClick={() => cancelTrip(t._id)}>Cancel</button>
                   </div>
                 )}
               </div>
