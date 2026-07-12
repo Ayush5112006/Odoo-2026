@@ -67,6 +67,7 @@ function App() {
   const [rememberMe, setRememberMe] = useState(Boolean(auth));
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotEmail, setForgotEmail] = useState(auth?.user?.email || '');
@@ -147,6 +148,7 @@ function App() {
   const fetchAllData = async () => {
     try {
       if (!auth?.token) return;
+      setIsDataLoading(true);
 
       const [vRes, dRes, tRes, mRes, fRes, sRes, rbacRes] = await Promise.all([
         api.get('/vehicles'),
@@ -177,6 +179,8 @@ function App() {
         console.error('Failed to communicate with MongoDB backend API:', err);
         triggerToast('Failed to fetch data from backend', true);
       }
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
@@ -200,6 +204,26 @@ function App() {
 
     fetchRoles();
   }, []);
+
+  const getViewPermission = (viewName) => {
+    if (viewName === 'settings') return '__settings';
+    if (viewName === 'fuel') return 'Fuel/Exp.';
+    return viewName.charAt(0).toUpperCase() + viewName.slice(1);
+  };
+
+  useEffect(() => {
+    if (role && activeView !== 'access-denied') {
+      const perm = getViewPermission(activeView);
+      if (!checkAccess(perm)) {
+        const allowed = rbacAccess[role] || ROLE_ACCESS[role];
+        if (allowed && allowed.length > 0) {
+          setActiveView(ROLE_VIEW_MAP[allowed[0]] || 'dashboard');
+        } else {
+          setActiveView('access-denied');
+        }
+      }
+    }
+  }, [role, rbacAccess, activeView]);
 
   useEffect(() => {
     if (!trips.length) return;
@@ -474,6 +498,7 @@ function App() {
     }
 
     try {
+      setIsDataLoading(true);
       await api.post('/vehicles', { reg, name, type: nvType, cap, odo, cost, status: 'Available' });
       await fetchAllData();
       setNvReg('');
@@ -486,6 +511,8 @@ function App() {
       triggerToast('Vehicle registered');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
@@ -503,6 +530,7 @@ function App() {
     }
 
     try {
+      setIsDataLoading(true);
       await api.post('/drivers', { name, lic, cat: ndCat, exp, contact, trips: 0, safety: score, status: 'Available' });
       await fetchAllData();
       setNdName('');
@@ -514,16 +542,21 @@ function App() {
       triggerToast('Driver added');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
   const setDriverStatus = async (driverId, value) => {
     try {
+      setIsDataLoading(true);
       await api.put(`/drivers/${driverId}/status`, { status: value });
       await fetchAllData();
       triggerToast('Driver status updated');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
@@ -546,6 +579,7 @@ function App() {
     setTripSeq(tripSeq + 1);
 
     try {
+      setIsDataLoading(true);
       await api.post('/trips', {
         id,
         source: tSource || 'Depot',
@@ -562,6 +596,8 @@ function App() {
       triggerToast('Trip dispatched — vehicle & driver set to On Trip');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
@@ -571,6 +607,7 @@ function App() {
     setTripSeq(tripSeq + 1);
 
     try {
+      setIsDataLoading(true);
       await api.post('/trips', {
         id,
         source: tSource || 'Depot',
@@ -587,27 +624,35 @@ function App() {
       triggerToast('Trip saved as draft');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
   // Trips: Actions
   const completeTrip = async (tripId) => {
     try {
+      setIsDataLoading(true);
       await api.put(`/trips/${tripId}/action`, { action: 'Complete' });
       await fetchAllData();
       triggerToast('Trip completed — vehicle & driver back to Available');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
   const cancelTrip = async (tripId) => {
     try {
+      setIsDataLoading(true);
       await api.put(`/trips/${tripId}/action`, { action: 'Cancel' });
       await fetchAllData();
       triggerToast('Trip cancelled — vehicle & driver restored to Available');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
@@ -625,6 +670,7 @@ function App() {
     const cost = Number(mCost) || 0;
 
     try {
+      setIsDataLoading(true);
       await api.post('/maintenance', { vehicle: vehObj._id, service, cost, date: mDate, status: 'In Shop' });
       await fetchAllData();
       setMType('');
@@ -632,16 +678,21 @@ function App() {
       triggerToast(`${vehObj.name} moved to In Shop`);
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
   const closeMaintenance = async (recordId) => {
     try {
+      setIsDataLoading(true);
       await api.put(`/maintenance/${recordId}/close`);
       await fetchAllData();
       triggerToast('Maintenance closed — vehicle back to Available');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
@@ -659,6 +710,7 @@ function App() {
     const cost = Number(ffCost) || 0;
 
     try {
+      setIsDataLoading(true);
       await api.post('/fuel', { vehicle: vehObj._id, date: ffDate, liters, cost });
       await fetchAllData();
       setFfLiters('');
@@ -666,16 +718,21 @@ function App() {
       triggerToast('Fuel log added');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
   // Settings: Cloud Sync save
   const saveSettings = async () => {
     try {
+      setIsDataLoading(true);
       await api.put('/settings', { depot: settingsDepot, currency: settingsCurrency, distanceUnit: settingsDistance });
       triggerToast('Settings saved successfully');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Failed to save settings', true);
+    } finally {
+      setIsDataLoading(false);
     }
   };
 
@@ -843,7 +900,7 @@ function App() {
         />
 
         <div className="content">
-          {activeView === 'dashboard' && (
+          {activeView === 'dashboard' && checkAccess('Dashboard') && (
             <DashboardView
               vehicles={vehicles}
               trips={trips}
@@ -865,7 +922,7 @@ function App() {
             />
           )}
 
-          {activeView === 'fleet' && (
+          {activeView === 'fleet' && checkAccess('Fleet') && (
             <FleetView
               vehicles={vehicles}
               showAddVehicle={showAddVehicle}
@@ -896,7 +953,7 @@ function App() {
             />
           )}
 
-          {activeView === 'drivers' && (
+          {activeView === 'drivers' && checkAccess('Drivers') && (
             <DriversView
               drivers={drivers}
               showAddDriver={showAddDriver}
@@ -920,7 +977,7 @@ function App() {
             />
           )}
 
-          {activeView === 'trips' && (
+          {activeView === 'trips' && checkAccess('Trips') && (
             <TripsView
               vehicles={vehicles}
               drivers={drivers}
@@ -951,7 +1008,7 @@ function App() {
             <AccessDenied role={role} onReturn={() => setActiveView('dashboard')} />
           )}
 
-          {activeView === 'maintenance' && (
+          {activeView === 'maintenance' && checkAccess('Maintenance') && (
             <MaintenanceView
               vehicles={vehicles}
               maint={maint}
@@ -970,7 +1027,7 @@ function App() {
             />
           )}
 
-          {activeView === 'fuel' && (
+          {activeView === 'fuel' && checkAccess('Fuel/Exp.') && (
             <FuelView
               vehicles={vehicles}
               fuel={fuel}
@@ -989,7 +1046,7 @@ function App() {
             />
           )}
 
-          {activeView === 'analytics' && (
+          {activeView === 'analytics' && checkAccess('Analytics') && (
             <AnalyticsView
               trips={trips}
               fuel={fuel}
@@ -1003,7 +1060,7 @@ function App() {
             />
           )}
 
-          {activeView === 'settings' && (
+          {activeView === 'settings' && checkAccess('__settings') && (
             <SettingsView
               settingsDepot={settingsDepot}
               setSettingsDepot={setSettingsDepot}
@@ -1019,6 +1076,14 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* BUFFERING / LOADING OVERLAY */}
+      {isDataLoading && (
+        <div className="buffering-overlay" id="buffering-overlay">
+          <div className="buffering-spinner"></div>
+          <div className="buffering-text">Syncing operations database…</div>
+        </div>
+      )}
 
       {/* TOAST SYSTEM */}
       <div className={`toast ${toast.show ? 'show' : ''} ${toast.isErr ? 'err' : ''}`} id="toast">

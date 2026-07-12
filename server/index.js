@@ -4,7 +4,7 @@ import dotenv from 'dotenv'
 
 import connectDB from './config/db.js'
 import authRoutes from './routes/auth.js'
-import { requireAuth } from './middleware/auth.js'
+import { requireAuth, requireRole } from './middleware/auth.js'
 
 import Vehicle from './models/Vehicle.js'
 import Driver from './models/Driver.js'
@@ -131,7 +131,7 @@ app.get('/api/settings', async (_req, res) => {
   }
 })
 
-app.put('/api/settings', async (req, res) => {
+app.put('/api/settings', requireRole(['Fleet Manager']), async (req, res) => {
   try {
     let config = await Settings.findOne()
     if (!config) {
@@ -158,7 +158,7 @@ app.get('/api/vehicles', async (_req, res) => {
   }
 })
 
-app.post('/api/vehicles', async (req, res) => {
+app.post('/api/vehicles', requireRole(['Fleet Manager']), async (req, res) => {
   try {
     const payload = {
       reg: String(req.body.reg || '').trim().toUpperCase(),
@@ -210,7 +210,7 @@ app.get('/api/drivers', async (_req, res) => {
   }
 })
 
-app.post('/api/drivers', async (req, res) => {
+app.post('/api/drivers', requireRole(['Safety Officer', 'Fleet Manager']), async (req, res) => {
   try {
     const payload = {
       name: String(req.body.name || '').trim(),
@@ -275,7 +275,7 @@ app.get('/api/trips', async (_req, res) => {
   }
 })
 
-app.post('/api/trips', async (req, res) => {
+app.post('/api/trips', requireRole(['Dispatcher', 'Safety Officer', 'Fleet Manager']), async (req, res) => {
   try {
     const { id, source, dest, vehicle, driver, cargo, dist, status } = req.body
 
@@ -370,7 +370,7 @@ app.post('/api/trips', async (req, res) => {
   }
 })
 
-app.put('/api/trips/:id/action', async (req, res) => {
+app.put('/api/trips/:id/action', requireRole(['Dispatcher', 'Safety Officer', 'Fleet Manager']), async (req, res) => {
   try {
     const { action, finalOdo, fuelConsumed } = req.body
     const trip = await Trip.findById(req.params.id)
@@ -447,7 +447,7 @@ app.get('/api/maintenance', async (_req, res) => {
   }
 })
 
-app.post('/api/maintenance', async (req, res) => {
+app.post('/api/maintenance', requireRole(['Fleet Manager']), async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.body.vehicle)
     if (!vehicle) {
@@ -483,7 +483,7 @@ app.post('/api/maintenance', async (req, res) => {
   }
 })
 
-app.put('/api/maintenance/:id/close', async (req, res) => {
+app.put('/api/maintenance/:id/close', requireRole(['Fleet Manager']), async (req, res) => {
   try {
     const record = await Maintenance.findById(req.params.id)
     if (!record) {
@@ -515,7 +515,7 @@ app.get('/api/fuel', async (_req, res) => {
   }
 })
 
-app.post('/api/fuel', async (req, res) => {
+app.post('/api/fuel', requireRole(['Financial Analyst', 'Fleet Manager']), async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.body.vehicle)
     if (!vehicle) {
