@@ -9,6 +9,17 @@ function SettingsView({
   setSettingsDistance,
   saveSettings
 }) {
+  const modules = ['Fleet', 'Drivers', 'Trips', 'Fuel/Exp.', 'Analytics'];
+
+  const renderPermission = (role, module) => {
+    const allowed = rbacAccess?.[role] || [];
+    if (allowed.includes(module)) return <td className="perm yes">✓</td>;
+    if ((module === 'Fleet' || module === 'Trips') && role === 'Dispatcher') return <td className="perm view">view</td>;
+    if (module === 'Trips' && role === 'Safety Officer') return <td className="perm view">view</td>;
+    if (module === 'Fleet' && role === 'Financial Analyst') return <td className="perm view">view</td>;
+    return <td className="perm no">–</td>;
+  };
+
   return (
     <section className="view" id="page-settings" style={{ display: 'block' }}>
       <div className="page-head">
@@ -36,13 +47,24 @@ function SettingsView({
           <h3>Role-Based Access (RBAC)</h3>
           <table className="rbac-table">
             <thead>
-              <tr><th>Role</th><th>Fleet</th><th>Drivers</th><th>Trips</th><th>Fuel/Exp.</th><th>Analytics</th></tr>
+              <tr>
+                <th>Role</th>
+                {modules.map((module) => (
+                  <th key={module}>{module}</th>
+                ))}
+              </tr>
             </thead>
             <tbody>
-              <tr><td>Fleet Manager</td><td className="perm yes">✓</td><td className="perm yes">✓</td><td className="perm no">–</td><td className="perm no">–</td><td className="perm yes">✓</td></tr>
-              <tr><td>Dispatcher</td><td className="perm view">view</td><td className="perm no">–</td><td className="perm yes">✓</td><td className="perm no">–</td><td className="perm no">–</td></tr>
-              <tr><td>Safety Officer</td><td className="perm no">–</td><td className="perm yes">✓</td><td className="perm view">view</td><td className="perm no">–</td><td className="perm no">–</td></tr>
-              <tr><td>Financial Analyst</td><td className="perm view">view</td><td className="perm no">–</td><td className="perm no">–</td><td className="perm yes">✓</td><td className="perm yes">✓</td></tr>
+              {rbacRoles.map((role) => (
+                <tr key={role}>
+                  <td>{role}</td>
+                  {modules.map((module) => (
+                    <React.Fragment key={`${role}-${module}`}>
+                      {renderPermission(role, module)}
+                    </React.Fragment>
+                  ))}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

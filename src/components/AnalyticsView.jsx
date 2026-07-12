@@ -6,7 +6,10 @@ function AnalyticsView({
   maint,
   fleetUtilization,
   exportCSV,
-  fmtMoney
+  fmtMoney,
+  vehicleRoiPct,
+  monthlyRevenueSeries,
+  costliestVehicles
 }) {
   return (
     <section className="view" id="page-analytics" style={{ display: 'block' }}>
@@ -36,17 +39,7 @@ function AnalyticsView({
         </div>
         <div className="kpi-card acc-green">
           <div className="kpi-label">Vehicle ROI (est.)</div>
-          <div className="kpi-value">
-            {(() => {
-              const revenue = trips
-                .filter(t => t.status === 'Completed')
-                .reduce((sum, t) => sum + (t.dist || 0) * (t.cargo || 1) * 0.05, 0);
-              const opCost = fuel.reduce((sum, f) => sum + f.cost, 0) + maint.reduce((sum, m) => sum + m.cost, 0);
-              const totalFleetCost = vehicles.reduce((sum, v) => sum + (v.cost || 45000), 0);
-              const roiVal = 12.5 + (totalFleetCost > 0 ? (((revenue - opCost) / totalFleetCost) * 10) : 0);
-              return roiVal.toFixed(1) + '%';
-            })()}
-          </div>
+          <div className="kpi-value">{vehicleRoiPct.toFixed(1)}%</div>
         </div>
       </div>
 
@@ -80,6 +73,15 @@ function AnalyticsView({
                 );
               });
             })()}
+            {(monthlyRevenueSeries.length ? monthlyRevenueSeries : [{ label: 'No Data', value: 0 }]).map((point, i, arr) => {
+              const maxVal = Math.max(...arr.map((p) => p.value), 1);
+              const pct = (point.value / maxVal) * 100;
+              return (
+                <div key={i} className="cb" style={{ height: `${pct}%` }}>
+                  <span>{point.label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -100,13 +102,13 @@ function AnalyticsView({
               const topMax = entries.length ? entries[0][1] : 1;
               const barColors = ['var(--red)', 'var(--amber)', 'var(--blue)'];
 
-              return entries.map(([name, val], i) => (
-                <div key={name} className="brow">
-                  <span>{name}</span>
+              return entries.map((entry, i) => (
+                <div key={`${entry.name}-${i}`} className="brow">
+                  <span>{entry.name}</span>
                   <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${(val / topMax * 100)}%`, backgroundColor: barColors[i] || 'var(--blue)' }}></div>
+                    <div className="bar-fill" style={{ width: `${(entry.value / topMax * 100)}%`, backgroundColor: barColors[i] || 'var(--blue)' }}></div>
                   </div>
-                  <span className="n" style={{ width: '70px' }}>{fmtMoney(val)}</span>
+                  <span className="n" style={{ width: '70px' }}>{fmtMoney(entry.value)}</span>
                 </div>
               ));
             })()}

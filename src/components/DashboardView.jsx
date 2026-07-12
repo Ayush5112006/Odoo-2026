@@ -3,13 +3,13 @@ import React from 'react';
 function DashboardView({
   vehicles,
   trips,
-  drivers,
   fVehType,
   setFVehType,
   fStatus,
   setFStatus,
   fRegion,
   setFRegion,
+  regionOptions,
   activeVehCount,
   availVehCount,
   inShopVehCount,
@@ -40,9 +40,9 @@ function DashboardView({
         </select>
         <select value={fRegion} onChange={(e) => setFRegion(e.target.value)}>
           <option>Region: All</option>
-          <option>Gandhinagar</option>
-          <option>Ahmedabad</option>
-          <option>Vatva</option>
+          {regionOptions.map((region) => (
+            <option key={region}>{region}</option>
+          ))}
         </select>
       </div>
 

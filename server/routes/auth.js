@@ -4,6 +4,7 @@ import User from '../models/User.js'
 
 const router = express.Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'transitops-secret'
+const ROLE_ENUM = ['Fleet Manager', 'Dispatcher', 'Safety Officer', 'Financial Analyst']
 
 const createToken = (user) => {
   return jwt.sign(
@@ -67,6 +68,10 @@ router.post('/forgot-password', async (req, res) => {
     success: true,
     message: 'If that email exists in our system, password reset instructions have been sent.',
   })
+})
+
+router.get('/roles', (_req, res) => {
+  return res.json({ roles: ROLE_ENUM })
 })
 
 export default router
