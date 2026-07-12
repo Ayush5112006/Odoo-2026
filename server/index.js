@@ -106,7 +106,12 @@ app.get('/api/profile', requireAuth, (req, res) => {
   })
 })
 
-app.use('/api', requireAuth)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api') && !req.path.startsWith('/api/auth')) {
+    return requireAuth(req, res, next)
+  }
+  next()
+})
 
 app.get('/api/settings', async (_req, res) => {
   try {
