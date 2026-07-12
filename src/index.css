@@ -383,17 +383,46 @@ a {
   color: var(--muted);
 }
 
-.error-banner {
+.error-banner,
+.success-banner {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(242, 85, 91, 0.1);
-  border: 1px solid rgba(242, 85, 91, 0.35);
-  color: var(--red);
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 13px;
   margin-bottom: 16px;
+}
+
+.error-banner {
+  background: rgba(242, 85, 91, 0.1);
+  border: 1px solid rgba(242, 85, 91, 0.35);
+  color: var(--red);
+}
+
+.success-banner {
+  background: rgba(0, 255, 170, 0.1);
+  border: 1px solid rgba(0, 255, 170, 0.25);
+  color: var(--green);
+}
+
+.field-password .password-row {
+  display: flex;
+  gap: 10px;
+}
+
+.link-button {
+  background: transparent;
+  border: none;
+  color: var(--blue);
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.link-button:hover {
+  color: var(--amber);
 }
 
 /* ===== APP SHELL ===== */
