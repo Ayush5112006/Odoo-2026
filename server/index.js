@@ -1,10 +1,12 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 
 import connectDB from './config/db.js'
 import authRoutes from './routes/auth.js'
-import { requireAuth, requireRole } from './middleware/auth.js'
+import { requireAuth } from './middleware/auth.js'
 
 import Vehicle from './models/Vehicle.js'
 import Driver from './models/Driver.js'
@@ -14,10 +16,13 @@ import Fuel from './models/Fuel.js'
 import Settings from './models/Settings.js'
 import User from './models/User.js'
 
-dotenv.config()
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const envPath = path.resolve(__dirname, '../.env')
+dotenv.config({ path: envPath })
 
 const app = express()
-const port = process.env.PORT || 4000
+const port = Number(process.env.PORT) || 4000
 
 app.use(cors())
 app.use(express.json())
@@ -123,11 +128,7 @@ app.get('/api/settings', async (_req, res) => {
   try {
     let config = await Settings.findOne()
     if (!config) {
-      config = await Settings.create({ depot: 'Gandhinagar Depot, GJ4', currency: 'INR (₹)', distanceUnit: 'Kilometers', rbacAccess: ROLE_ACCESS })
-    }
-    if (!config.rbacAccess) {
-      config.rbacAccess = ROLE_ACCESS
-      await config.save()
+      config = await Settings.create({ depot: 'Gandhinagar Depot, GJ4', currency: 'INR (₹)', distanceUnit: 'Kilometers' })
     }
     res.json(config)
   } catch (error) {
@@ -135,7 +136,7 @@ app.get('/api/settings', async (_req, res) => {
   }
 })
 
-app.put('/api/settings', requireRole(['Fleet Manager']), async (req, res) => {
+app.put('/api/settings', async (req, res) => {
   try {
     let config = await Settings.findOne()
     if (!config) {
@@ -144,10 +145,6 @@ app.put('/api/settings', requireRole(['Fleet Manager']), async (req, res) => {
       config.depot = req.body.depot || config.depot
       config.currency = req.body.currency || config.currency
       config.distanceUnit = req.body.distanceUnit || config.distanceUnit
-      if (req.body.rbacAccess) {
-        config.rbacAccess = req.body.rbacAccess
-        config.markModified('rbacAccess')
-      }
     }
 
     await config.save()
@@ -166,7 +163,7 @@ app.get('/api/vehicles', async (_req, res) => {
   }
 })
 
-app.post('/api/vehicles', requireRole(['Fleet Manager']), async (req, res) => {
+app.post('/api/vehicles', async (req, res) => {
   try {
     const payload = {
       reg: String(req.body.reg || '').trim().toUpperCase(),
@@ -218,7 +215,7 @@ app.get('/api/drivers', async (_req, res) => {
   }
 })
 
-app.post('/api/drivers', requireRole(['Safety Officer', 'Fleet Manager']), async (req, res) => {
+app.post('/api/drivers', async (req, res) => {
   try {
     const payload = {
       name: String(req.body.name || '').trim(),
@@ -283,7 +280,7 @@ app.get('/api/trips', async (_req, res) => {
   }
 })
 
-app.post('/api/trips', requireRole(['Dispatcher', 'Safety Officer', 'Fleet Manager']), async (req, res) => {
+app.post('/api/trips', async (req, res) => {
   try {
     const { id, source, dest, vehicle, driver, cargo, dist, status } = req.body
 
@@ -378,7 +375,7 @@ app.post('/api/trips', requireRole(['Dispatcher', 'Safety Officer', 'Fleet Manag
   }
 })
 
-app.put('/api/trips/:id/action', requireRole(['Dispatcher', 'Safety Officer', 'Fleet Manager']), async (req, res) => {
+app.put('/api/trips/:id/action', async (req, res) => {
   try {
     const { action, finalOdo, fuelConsumed } = req.body
     const trip = await Trip.findById(req.params.id)
@@ -455,7 +452,7 @@ app.get('/api/maintenance', async (_req, res) => {
   }
 })
 
-app.post('/api/maintenance', requireRole(['Fleet Manager']), async (req, res) => {
+app.post('/api/maintenance', async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.body.vehicle)
     if (!vehicle) {
@@ -491,7 +488,7 @@ app.post('/api/maintenance', requireRole(['Fleet Manager']), async (req, res) =>
   }
 })
 
-app.put('/api/maintenance/:id/close', requireRole(['Fleet Manager']), async (req, res) => {
+app.put('/api/maintenance/:id/close', async (req, res) => {
   try {
     const record = await Maintenance.findById(req.params.id)
     if (!record) {
@@ -523,7 +520,7 @@ app.get('/api/fuel', async (_req, res) => {
   }
 })
 
-app.post('/api/fuel', requireRole(['Financial Analyst', 'Fleet Manager']), async (req, res) => {
+app.post('/api/fuel', async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.body.vehicle)
     if (!vehicle) {
@@ -549,16 +546,11 @@ app.get('/api/meta/roles', (_req, res) => {
   res.json({ roles: ROLE_ENUM })
 })
 
-app.get('/api/meta/rbac', async (_req, res) => {
-  try {
-    let config = await Settings.findOne()
-    res.json({
-      roles: ROLE_ENUM,
-      access: config?.rbacAccess || ROLE_ACCESS,
-    })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
+app.get('/api/meta/rbac', (_req, res) => {
+  res.json({
+    roles: ROLE_ENUM,
+    access: ROLE_ACCESS,
+  })
 })
 
 app.use((req, res) => {
@@ -568,8 +560,17 @@ app.use((req, res) => {
 connectDB()
   .then(seedBaseData)
   .then(() => {
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       console.log(`TransitOps API running on http://localhost:${port}`)
+    })
+
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${port} is already in use. Make sure no other process is running on the same port.`)
+      } else {
+        console.error('Server error:', error)
+      }
+      process.exit(1)
     })
   })
   .catch((error) => {

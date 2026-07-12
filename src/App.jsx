@@ -19,7 +19,6 @@ import MaintenanceView from './components/MaintenanceView';
 import FuelView from './components/FuelView';
 import AnalyticsView from './components/AnalyticsView';
 import SettingsView from './components/SettingsView';
-import SkeletonLoader from './components/SkeletonLoader';
 
 const ROLE_ACCESS = {
   'Fleet Manager': ['Dashboard', 'Fleet', 'Maintenance', 'Analytics'],
@@ -68,11 +67,16 @@ function App() {
   const [rememberMe, setRememberMe] = useState(Boolean(auth));
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isDataLoading, setIsDataLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [forgotMode, setForgotMode] = useState(false);
   const [forgotEmail, setForgotEmail] = useState(auth?.user?.email || '');
   const [forgotMessage, setForgotMessage] = useState('');
+
+  // Account locking popup states
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalType, setAuthModalType] = useState('failed');
+  const [remainingAttempts, setRemainingAttempts] = useState(null);
+  const [lockUntil, setLockUntil] = useState(null);
 
   // --- APP LEVEL GLOBAL STATES ---
   const [activeView, setActiveView] = useState('dashboard');
@@ -149,7 +153,6 @@ function App() {
   const fetchAllData = async () => {
     try {
       if (!auth?.token) return;
-      setIsDataLoading(true);
 
       const [vRes, dRes, tRes, mRes, fRes, sRes, rbacRes] = await Promise.all([
         api.get('/vehicles'),
@@ -180,8 +183,6 @@ function App() {
         console.error('Failed to communicate with MongoDB backend API:', err);
         triggerToast('Failed to fetch data from backend', true);
       }
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
@@ -205,26 +206,6 @@ function App() {
 
     fetchRoles();
   }, []);
-
-  const getViewPermission = (viewName) => {
-    if (viewName === 'settings') return '__settings';
-    if (viewName === 'fuel') return 'Fuel/Exp.';
-    return viewName.charAt(0).toUpperCase() + viewName.slice(1);
-  };
-
-  useEffect(() => {
-    if (role && activeView !== 'access-denied') {
-      const perm = getViewPermission(activeView);
-      if (!checkAccess(perm)) {
-        const allowed = rbacAccess[role] || ROLE_ACCESS[role];
-        if (allowed && allowed.length > 0) {
-          setActiveView(ROLE_VIEW_MAP[allowed[0]] || 'dashboard');
-        } else {
-          setActiveView('access-denied');
-        }
-      }
-    }
-  }, [role, rbacAccess, activeView]);
 
   useEffect(() => {
     if (!trips.length) return;
@@ -379,6 +360,8 @@ function App() {
     if (e) e.preventDefault();
     setLoginError('');
     setForgotMessage('');
+    setRemainingAttempts(null);
+    setLockUntil(null);
 
     if (forgotMode) {
       return handleForgotPassword(e);
@@ -431,10 +414,23 @@ function App() {
       const allowed = rbacAccess[data.user.role] || ROLE_ACCESS[data.user.role];
       setActiveView(ROLE_VIEW_MAP[allowed?.[0]] || 'dashboard');
     } catch (error) {
-      setLoginError(
-        error?.response?.data?.message ||
-        'Unable to login. Please check your credentials and try again.'
-      );
+      const resData = error?.response?.data;
+      const status = error?.response?.status;
+      const msg = resData?.message || 'Unable to login. Please check your credentials and try again.';
+      setLoginError(msg);
+
+      if (resData && (resData.remainingAttempts !== undefined || resData.lockUntil)) {
+        setRemainingAttempts(resData.remainingAttempts);
+        setLockUntil(resData.lockUntil);
+        setAuthModalType(resData.lockUntil ? 'locked' : 'failed');
+        setShowAuthModal(true);
+      } else {
+        if (status === 401) {
+          setRemainingAttempts(null);
+          setAuthModalType('failed');
+          setShowAuthModal(true);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -453,35 +449,12 @@ function App() {
     triggerToast('Signed out successfully');
   };
 
-  const checkAccess = (perm, type = 'any') => {
+  const checkAccess = (perm) => {
     if (!role) return false;
     if (perm === '__settings') {
       return role === 'Fleet Manager';
     }
-    const userPerms = rbacAccess[role] || [];
-    if (type === 'write') {
-      return userPerms.includes(perm);
-    }
-    return userPerms.includes(perm) || userPerms.includes(`${perm}:view`);
-  };
-
-  const handleRbacChange = (targetRole, module, accessType) => {
-    setRbacAccess(prev => {
-      const updated = { ...prev };
-      const rolePerms = updated[targetRole] ? [...updated[targetRole]] : [];
-      
-      // Clean existing permissions for this module
-      const cleanedPerms = rolePerms.filter(p => p !== module && p !== `${module}:view`);
-      
-      if (accessType === 'full') {
-        cleanedPerms.push(module);
-      } else if (accessType === 'view') {
-        cleanedPerms.push(`${module}:view`);
-      }
-      
-      updated[targetRole] = cleanedPerms;
-      return updated;
-    });
+    return rbacAccess[role]?.includes(perm);
   };
 
   const handleNavClick = (item) => {
@@ -522,7 +495,6 @@ function App() {
     }
 
     try {
-      setIsDataLoading(true);
       await api.post('/vehicles', { reg, name, type: nvType, cap, odo, cost, status: 'Available' });
       await fetchAllData();
       setNvReg('');
@@ -535,8 +507,6 @@ function App() {
       triggerToast('Vehicle registered');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
@@ -554,7 +524,6 @@ function App() {
     }
 
     try {
-      setIsDataLoading(true);
       await api.post('/drivers', { name, lic, cat: ndCat, exp, contact, trips: 0, safety: score, status: 'Available' });
       await fetchAllData();
       setNdName('');
@@ -566,21 +535,16 @@ function App() {
       triggerToast('Driver added');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
   const setDriverStatus = async (driverId, value) => {
     try {
-      setIsDataLoading(true);
       await api.put(`/drivers/${driverId}/status`, { status: value });
       await fetchAllData();
       triggerToast('Driver status updated');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
@@ -603,7 +567,6 @@ function App() {
     setTripSeq(tripSeq + 1);
 
     try {
-      setIsDataLoading(true);
       await api.post('/trips', {
         id,
         source: tSource || 'Depot',
@@ -620,8 +583,6 @@ function App() {
       triggerToast('Trip dispatched — vehicle & driver set to On Trip');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
@@ -631,7 +592,6 @@ function App() {
     setTripSeq(tripSeq + 1);
 
     try {
-      setIsDataLoading(true);
       await api.post('/trips', {
         id,
         source: tSource || 'Depot',
@@ -648,35 +608,27 @@ function App() {
       triggerToast('Trip saved as draft');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
   // Trips: Actions
   const completeTrip = async (tripId) => {
     try {
-      setIsDataLoading(true);
       await api.put(`/trips/${tripId}/action`, { action: 'Complete' });
       await fetchAllData();
       triggerToast('Trip completed — vehicle & driver back to Available');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
   const cancelTrip = async (tripId) => {
     try {
-      setIsDataLoading(true);
       await api.put(`/trips/${tripId}/action`, { action: 'Cancel' });
       await fetchAllData();
       triggerToast('Trip cancelled — vehicle & driver restored to Available');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
@@ -694,7 +646,6 @@ function App() {
     const cost = Number(mCost) || 0;
 
     try {
-      setIsDataLoading(true);
       await api.post('/maintenance', { vehicle: vehObj._id, service, cost, date: mDate, status: 'In Shop' });
       await fetchAllData();
       setMType('');
@@ -702,21 +653,16 @@ function App() {
       triggerToast(`${vehObj.name} moved to In Shop`);
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
   const closeMaintenance = async (recordId) => {
     try {
-      setIsDataLoading(true);
       await api.put(`/maintenance/${recordId}/close`);
       await fetchAllData();
       triggerToast('Maintenance closed — vehicle back to Available');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
@@ -734,7 +680,6 @@ function App() {
     const cost = Number(ffCost) || 0;
 
     try {
-      setIsDataLoading(true);
       await api.post('/fuel', { vehicle: vehObj._id, date: ffDate, liters, cost });
       await fetchAllData();
       setFfLiters('');
@@ -742,26 +687,16 @@ function App() {
       triggerToast('Fuel log added');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Database connection failed', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
   // Settings: Cloud Sync save
   const saveSettings = async () => {
     try {
-      setIsDataLoading(true);
-      await api.put('/settings', {
-        depot: settingsDepot,
-        currency: settingsCurrency,
-        distanceUnit: settingsDistance,
-        rbacAccess: rbacAccess
-      });
+      await api.put('/settings', { depot: settingsDepot, currency: settingsCurrency, distanceUnit: settingsDistance });
       triggerToast('Settings saved successfully');
     } catch (err) {
       triggerToast(err?.response?.data?.error || 'Failed to save settings', true);
-    } finally {
-      setIsDataLoading(false);
     }
   };
 
@@ -904,224 +839,228 @@ function App() {
         setForgotEmail={setForgotEmail}
         forgotMessage={forgotMessage}
         doLogin={doLogin}
+        showAuthModal={showAuthModal}
+        setShowAuthModal={setShowAuthModal}
+        authModalType={authModalType}
+        remainingAttempts={remainingAttempts}
+        lockUntil={lockUntil}
       />
     );
   }
 
   // --- RENDER MAIN LAYOUT SHELL ---
   return (
-    <div id="app" className="active">
-      <Sidebar
+    <div id="app" className="bg-background text-on-surface min-h-screen flex flex-col">
+      <Topbar
+        globalSearch={globalSearch}
+        setGlobalSearch={setGlobalSearch}
         role={role}
-        activeView={activeView}
-        handleNavClick={handleNavClick}
-        logout={logout}
-        checkAccess={checkAccess}
+        getAvatarInitials={getAvatarInitials}
+        userName={userName}
       />
 
-      <div className="main">
-        <Topbar
-          globalSearch={globalSearch}
-          setGlobalSearch={setGlobalSearch}
+      <div className="flex flex-1">
+        <Sidebar
           role={role}
-          getAvatarInitials={getAvatarInitials}
-          userName={userName}
+          activeView={activeView}
+          handleNavClick={handleNavClick}
+          logout={logout}
+          checkAccess={checkAccess}
         />
 
-        <div className="content">
-          {isDataLoading && vehicles.length === 0 ? (
-            <SkeletonLoader view={activeView} />
-          ) : (
-            <>
-              {activeView === 'dashboard' && checkAccess('Dashboard') && (
-                <DashboardView
-                  vehicles={vehicles}
-                  trips={trips}
-                  fVehType={fVehType}
-                  setFVehType={setFVehType}
-                  fStatus={fStatus}
-                  setFStatus={setFStatus}
-                  fRegion={fRegion}
-                  setFRegion={setFRegion}
-                  regionOptions={regionOptions}
-                  activeVehCount={activeVehCount}
-                  availVehCount={availVehCount}
-                  inShopVehCount={inShopVehCount}
-                  activeTripsCount={activeTripsCount}
-                  pendingTripsCount={pendingTripsCount}
-                  driversOnDuty={driversOnDuty}
-                  fleetUtilization={fleetUtilization}
-                  getPill={getPill}
-                />
-              )}
-
-              {activeView === 'fleet' && checkAccess('Fleet') && (
-                <FleetView
-                  vehicles={vehicles}
-                  showAddVehicle={showAddVehicle}
-                  setShowAddVehicle={setShowAddVehicle}
-                  nvReg={nvReg}
-                  setNvReg={setNvReg}
-                  nvName={nvName}
-                  setNvName={setNvName}
-                  nvType={nvType}
-                  setNvType={setNvType}
-                  nvCap={nvCap}
-                  setNvCap={setNvCap}
-                  nvOdo={nvOdo}
-                  setNvOdo={setNvOdo}
-                  nvCost={nvCost}
-                  setNvCost={setNvCost}
-                  vfType={vfType}
-                  setVfType={setVfType}
-                  vfStatus={vfStatus}
-                  setVfStatus={setVfStatus}
-                  vfReg={vfReg}
-                  setVfReg={setVfReg}
-                  vehValidation={vehValidation}
-                  setVehValidation={setVehValidation}
-                  saveVehicle={saveVehicle}
-                  fmtMoney={fmtMoney}
-                  getPill={getPill}
-                  canEdit={checkAccess('Fleet', 'write')}
-                />
-              )}
-
-              {activeView === 'drivers' && checkAccess('Drivers') && (
-                <DriversView
-                  drivers={drivers}
-                  showAddDriver={showAddDriver}
-                  setShowAddDriver={setShowAddDriver}
-                  ndName={ndName}
-                  setNdName={setNdName}
-                  ndLic={ndLic}
-                  setNdLic={setNdLic}
-                  ndCat={ndCat}
-                  setNdCat={setNdCat}
-                  ndExp={ndExp}
-                  setNdExp={setNdExp}
-                  ndContact={ndContact}
-                  setNdContact={setNdContact}
-                  ndScore={ndScore}
-                  setNdScore={setNdScore}
-                  saveDriver={saveDriver}
-                  setDriverStatus={setDriverStatus}
-                  isLicenseExpired={isLicenseExpired}
-                  getPill={getPill}
-                  canEdit={checkAccess('Drivers', 'write')}
-                />
-              )}
-
-              {activeView === 'trips' && checkAccess('Trips') && (
-                <TripsView
-                  vehicles={vehicles}
-                  drivers={drivers}
-                  trips={trips}
-                  tSource={tSource}
-                  setTSource={setTSource}
-                  tDest={tDest}
-                  setTDest={setTDest}
-                  tVehicle={tVehicle}
-                  setTVehicle={setTVehicle}
-                  tDriver={tDriver}
-                  setTDriver={setTDriver}
-                  tCargo={tCargo}
-                  setTCargo={setTCargo}
-                  tDist={tDist}
-                  setTDist={setTDist}
-                  tripValidation={tripValidation}
-                  createAndDispatch={createAndDispatch}
-                  createDraft={createDraft}
-                  completeTrip={completeTrip}
-                  cancelTrip={cancelTrip}
-                  isLicenseExpired={isLicenseExpired}
-                  getPill={getPill}
-                  canEdit={checkAccess('Trips', 'write')}
-                />
-              )}
-
-              {activeView === 'access-denied' && (
-                <AccessDenied role={role} onReturn={() => setActiveView('dashboard')} />
-              )}
-
-              {activeView === 'maintenance' && checkAccess('Maintenance') && (
-                <MaintenanceView
-                  vehicles={vehicles}
-                  maint={maint}
-                  mVehicle={mVehicle}
-                  setMVehicle={setMVehicle}
-                  mType={mType}
-                  setMType={setMType}
-                  mCost={mCost}
-                  setMCost={setMCost}
-                  mDate={mDate}
-                  setMDate={setMDate}
-                  saveMaintenance={saveMaintenance}
-                  closeMaintenance={closeMaintenance}
-                  fmtMoney={fmtMoney}
-                  getPill={getPill}
-                  canEdit={checkAccess('Maintenance', 'write')}
-                />
-              )}
-
-              {activeView === 'fuel' && checkAccess('Fuel/Exp.') && (
-                <FuelView
-                  vehicles={vehicles}
-                  fuel={fuel}
-                  expenses={expenses}
-                  maint={maint}
-                  ffVehicle={ffVehicle}
-                  setFfVehicle={setFfVehicle}
-                  ffDate={ffDate}
-                  setFfDate={setFfDate}
-                  ffLiters={ffLiters}
-                  setFfLiters={setFfLiters}
-                  ffCost={ffCost}
-                  setFfCost={setFfCost}
-                  saveFuel={saveFuel}
-                  fmtMoney={fmtMoney}
-                  canEdit={checkAccess('Fuel/Exp.', 'write')}
-                />
-              )}
-
-              {activeView === 'analytics' && checkAccess('Analytics') && (
-                <AnalyticsView
-                  trips={trips}
-                  fuel={fuel}
-                  maint={maint}
-                  fleetUtilization={fleetUtilization}
-                  exportCSV={exportCSV}
-                  fmtMoney={fmtMoney}
-                  vehicleRoiPct={vehicleRoiPct}
-                  monthlyRevenueSeries={monthlyRevenueSeries}
-                  costliestVehicles={costliestVehicles}
-                />
-              )}
-
-              {activeView === 'settings' && checkAccess('__settings') && (
-                <SettingsView
-                  settingsDepot={settingsDepot}
-                  setSettingsDepot={setSettingsDepot}
-                  settingsCurrency={settingsCurrency}
-                  setSettingsCurrency={setSettingsCurrency}
-                  settingsDistance={settingsDistance}
-                  setSettingsDistance={setSettingsDistance}
-                  saveSettings={saveSettings}
-                  triggerToast={saveSettings} // Trigger saveSettings API
-                  rbacAccess={rbacAccess}
-                  rbacRoles={rbacRoles}
-                  onRbacChange={handleRbacChange}
-                />
-              )}
-            </>
+        <main className="flex-1 md:ml-64 p-margin-page min-h-[calc(100vh-4rem)]">
+          {activeView === 'dashboard' && (
+            <DashboardView
+              vehicles={vehicles}
+              trips={trips}
+              fVehType={fVehType}
+              setFVehType={setFVehType}
+              fStatus={fStatus}
+              setFStatus={setFStatus}
+              fRegion={fRegion}
+              setFRegion={setFRegion}
+              regionOptions={regionOptions}
+              activeVehCount={activeVehCount}
+              availVehCount={availVehCount}
+              inShopVehCount={inShopVehCount}
+              activeTripsCount={activeTripsCount}
+              pendingTripsCount={pendingTripsCount}
+              driversOnDuty={driversOnDuty}
+              fleetUtilization={fleetUtilization}
+              getPill={getPill}
+            />
           )}
-        </div>
+
+          {activeView === 'fleet' && (
+            <FleetView
+              vehicles={vehicles}
+              showAddVehicle={showAddVehicle}
+              setShowAddVehicle={setShowAddVehicle}
+              nvReg={nvReg}
+              setNvReg={setNvReg}
+              nvName={nvName}
+              setNvName={setNvName}
+              nvType={nvType}
+              setNvType={setNvType}
+              nvCap={nvCap}
+              setNvCap={setNvCap}
+              nvOdo={nvOdo}
+              setNvOdo={setNvOdo}
+              nvCost={nvCost}
+              setNvCost={setNvCost}
+              vfType={vfType}
+              setVfType={setVfType}
+              vfStatus={vfStatus}
+              setVfStatus={setVfStatus}
+              vfReg={vfReg}
+              setVfReg={setVfReg}
+              vehValidation={vehValidation}
+              setVehValidation={setVehValidation}
+              saveVehicle={saveVehicle}
+              fmtMoney={fmtMoney}
+              getPill={getPill}
+            />
+          )}
+
+          {activeView === 'drivers' && (
+            <DriversView
+              drivers={drivers}
+              showAddDriver={showAddDriver}
+              setShowAddDriver={setShowAddDriver}
+              ndName={ndName}
+              setNdName={setNdName}
+              ndLic={ndLic}
+              setNdLic={setNdLic}
+              ndCat={ndCat}
+              setNdCat={setNdCat}
+              ndExp={ndExp}
+              setNdExp={setNdExp}
+              ndContact={ndContact}
+              setNdContact={setNdContact}
+              ndScore={ndScore}
+              setNdScore={setNdScore}
+              saveDriver={saveDriver}
+              setDriverStatus={setDriverStatus}
+              isLicenseExpired={isLicenseExpired}
+              getPill={getPill}
+            />
+          )}
+
+          {activeView === 'trips' && (
+            <TripsView
+              vehicles={vehicles}
+              drivers={drivers}
+              trips={trips}
+              tSource={tSource}
+              setTSource={setTSource}
+              tDest={tDest}
+              setTDest={setTDest}
+              tVehicle={tVehicle}
+              setTVehicle={setTVehicle}
+              tDriver={tDriver}
+              setTDriver={setTDriver}
+              tCargo={tCargo}
+              setTCargo={setTCargo}
+              tDist={tDist}
+              setTDist={setTDist}
+              tripValidation={tripValidation}
+              createAndDispatch={createAndDispatch}
+              createDraft={createDraft}
+              completeTrip={completeTrip}
+              cancelTrip={cancelTrip}
+              isLicenseExpired={isLicenseExpired}
+              getPill={getPill}
+            />
+          )}
+
+          {activeView === 'access-denied' && (
+            <AccessDenied role={role} onReturn={() => setActiveView('dashboard')} />
+          )}
+
+          {activeView === 'maintenance' && (
+            <MaintenanceView
+              vehicles={vehicles}
+              maint={maint}
+              mVehicle={mVehicle}
+              setMVehicle={setMVehicle}
+              mType={mType}
+              setMType={setMType}
+              mCost={mCost}
+              setMCost={setMCost}
+              mDate={mDate}
+              setMDate={setMDate}
+              saveMaintenance={saveMaintenance}
+              closeMaintenance={closeMaintenance}
+              fmtMoney={fmtMoney}
+              getPill={getPill}
+            />
+          )}
+
+          {activeView === 'fuel' && (
+            <FuelView
+              vehicles={vehicles}
+              fuel={fuel}
+              expenses={expenses}
+              maint={maint}
+              ffVehicle={ffVehicle}
+              setFfVehicle={setFfVehicle}
+              ffDate={ffDate}
+              setFfDate={setFfDate}
+              ffLiters={ffLiters}
+              setFfLiters={setFfLiters}
+              ffCost={ffCost}
+              setFfCost={setFfCost}
+              saveFuel={saveFuel}
+              fmtMoney={fmtMoney}
+            />
+          )}
+
+          {activeView === 'analytics' && (
+            <AnalyticsView
+              trips={trips}
+              fuel={fuel}
+              maint={maint}
+              drivers={drivers}
+              vehicles={vehicles}
+              fleetUtilization={fleetUtilization}
+              exportCSV={exportCSV}
+              fmtMoney={fmtMoney}
+              vehicleRoiPct={vehicleRoiPct}
+              monthlyRevenueSeries={monthlyRevenueSeries}
+              costliestVehicles={costliestVehicles}
+            />
+          )}
+
+          {activeView === 'settings' && (
+            <SettingsView
+              settingsDepot={settingsDepot}
+              setSettingsDepot={setSettingsDepot}
+              settingsCurrency={settingsCurrency}
+              setSettingsCurrency={setSettingsCurrency}
+              settingsDistance={settingsDistance}
+              setSettingsDistance={setSettingsDistance}
+              saveSettings={saveSettings}
+              triggerToast={saveSettings}
+              rbacAccess={rbacAccess}
+              rbacRoles={rbacRoles}
+            />
+          )}
+        </main>
       </div>
 
       {/* TOAST SYSTEM */}
-      <div className={`toast ${toast.show ? 'show' : ''} ${toast.isErr ? 'err' : ''}`} id="toast">
-        <span className="dot"></span>
-        <span>{toast.msg}</span>
+      <div
+        className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border transition-all duration-300 transform ${
+          toast.show ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'
+        } ${
+          toast.isErr
+            ? 'bg-error-container text-on-error-container border-error/20'
+            : 'bg-surface-container-highest text-on-surface border-outline-variant'
+        }`}
+        id="toast"
+      >
+        <span className={`w-2 h-2 rounded-full ${toast.isErr ? 'bg-error' : 'bg-secondary-container'}`}></span>
+        <span className="font-body-md text-body-md">{toast.msg}</span>
       </div>
     </div>
   );
