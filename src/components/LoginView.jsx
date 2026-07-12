@@ -8,7 +8,17 @@ function LoginView({
   loginRole,
   setLoginRole,
   loginError,
-  doLogin
+  rememberMe,
+  setRememberMe,
+  showPassword,
+  setShowPassword,
+  loading,
+  forgotMode,
+  setForgotMode,
+  forgotEmail,
+  setForgotEmail,
+  forgotMessage,
+  doLogin,
 }) {
   return (
     <div id="view-login">
@@ -36,43 +46,102 @@ function LoginView({
 
       <div className="login-form-wrap">
         <form className="login-form" onSubmit={doLogin}>
-          <h2>Sign in to your account</h2>
-          <p className="sub">Enter your credentials to continue</p>
+          <h2>{forgotMode ? 'Reset your password' : 'Sign in to your account'}</h2>
+          <p className="sub">
+            {forgotMode
+              ? 'Enter your email to receive a password reset link.'
+              : 'Enter your credentials to continue.'}
+          </p>
 
           {loginError && (
-            <div className="error-banner">✕ Invalid credentials. Try any email/password — this is a live demo build.</div>
+            <div className="error-banner">✕ {loginError}</div>
+          )}
+          {forgotMessage && (
+            <div className="success-banner">✓ {forgotMessage}</div>
           )}
 
           <div className="field">
             <label>Email</label>
-            <input type="email" placeholder="raven.k@transitops.in" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+            <input
+              type="email"
+              placeholder="alex@transitops.in"
+              value={forgotMode ? forgotEmail : loginEmail}
+              onChange={(e) => forgotMode ? setForgotEmail(e.target.value) : setLoginEmail(e.target.value)}
+              required
+            />
           </div>
-          <div className="field">
-            <label>Password</label>
-            <input type="password" placeholder="••••••••" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} required />
-          </div>
-          <div className="field">
-            <label>Role (RBAC)</label>
-            <select value={loginRole} onChange={(e) => setLoginRole(e.target.value)}>
-              <option value="Fleet Manager">Fleet Manager</option>
-              <option value="Dispatcher">Dispatcher</option>
-              <option value="Safety Officer">Safety Officer</option>
-              <option value="Financial Analyst">Financial Analyst</option>
-            </select>
-          </div>
-          <div className="row-between">
-            <label><input type="checkbox" defaultChecked style={{ accentColor: 'var(--amber)' }} /> Remember me</label>
-            <a className="link-muted" href="#" onClick={(e) => e.preventDefault()}>Forgot password?</a>
-          </div>
-          <button className="btn btn-primary" type="submit">Sign in</button>
 
-          <div className="helper-note">
-            <b>Access is scoped by role after login:</b><br />
-            • Fleet Manager → Fleet, Maintenance, Analytics<br />
-            • Dispatcher → Dashboard, Trips<br />
-            • Safety Officer → Drivers, Trips (view)<br />
-            • Financial Analyst → Fuel & Expenses, Analytics
+          {!forgotMode && (
+            <>
+              <div className="field field-password">
+                <label>Password</label>
+                <div className="password-row">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={loginPass}
+                    onChange={(e) => setLoginPass(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              <div className="field">
+                <label>Role (optional)</label>
+                <select value={loginRole} onChange={(e) => setLoginRole(e.target.value)}>
+                  <option value="Fleet Manager">Fleet Manager</option>
+                  <option value="Dispatcher">Dispatcher</option>
+                  <option value="Safety Officer">Safety Officer</option>
+                  <option value="Financial Analyst">Financial Analyst</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          <div className="row-between">
+            {!forgotMode ? (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{ accentColor: 'var(--amber)' }}
+                />
+                Remember me
+              </label>
+            ) : <div />}
+            <button
+              type="button"
+              className="link-muted link-button"
+              onClick={() => {
+                setForgotMode(!forgotMode)
+                setLoginError('')
+                setForgotMessage('')
+              }}
+            >
+              {forgotMode ? 'Back to sign in' : 'Forgot password?'}
+            </button>
           </div>
+
+          <button className="btn btn-primary" type="submit" disabled={loading}>
+            {loading ? 'Working…' : forgotMode ? 'Send reset link' : 'Sign in'}
+          </button>
+
+          {!forgotMode && (
+            <div className="helper-note">
+              <b>Access is scoped by role after login:</b><br />
+              • Fleet Manager → Fleet, Maintenance, Analytics<br />
+              • Dispatcher → Dashboard, Trips<br />
+              • Safety Officer → Drivers, Trips (view)<br />
+              • Financial Analyst → Fuel & Expenses, Analytics
+            </div>
+          )}
         </form>
       </div>
     </div>
